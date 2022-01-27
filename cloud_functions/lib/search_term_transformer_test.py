@@ -1,12 +1,16 @@
 """Unit tests for the Search Term Transformer Class."""
-import os
-import pandas as pd
 
-import unittest.mock as mock
+from typing import List
 
 from absl.testing import parameterized
-from google.api_core import exceptions
-import search_term_transformer
+import pandas as pd
+import search_term_transformer as search_term_transformer_lib
+
+_DEFAULT_CLICKS_THRESHOLD = 5
+_DEFAULT_CONVERSIONS_THRESHOLD = 0
+_DEFAULT_SEARCH_TERM_TOKENS_THRESHOLD = 3
+_DEFAULT_SA_ACCOUNT_TYPE = 'Google'
+_DEFAULT_SA_LABEL = 'SA_add'
 
 _MATCH_TYPE_BROAD = 'broad'
 _MATCH_TYPE_EXACT = 'exact'
@@ -17,26 +21,62 @@ _TEST_SEARCH_REPORT_COLUMNS = [
     'campaign_id', 'campaign_name', 'ctr', 'keyword_text'
 ]
 
+_EXPECTED_SA_360_BULKSHEET_COLUMNS = [
+    'Row Type',
+    'Action',
+    'Account',
+    'Campaign',
+    'Ad Group',
+    'Keyword',
+    'Keyword match type',
+    'Label',
+]
+
+
+def _build_expected_df(keyword: str, match_types: List[str]) -> pd.DataFrame:
+  """Builds a DataFrame for test assertions.
+
+  Args:
+    keyword: The expected keyword in the DF transformed from a search term.
+    match_types: A list of one of 'broad', 'exact', or 'phrase' in the DF.
+
+  Returns:
+    A DataFrame representing the expected test output.
+  """
+  rows = []
+
+  for match_type in match_types:
+    rows.append({
+        'Row Type': 'keyword',
+        'Action': 'create',
+        'Account': 'Google',
+        'Campaign': '12345',
+        'Ad Group': 'test_ad_group',
+        'Keyword': keyword,
+        'Keyword match type': match_type,
+        'Label': 'SA_add',
+    })
+
+  return pd.DataFrame(rows, columns=_EXPECTED_SA_360_BULKSHEET_COLUMNS)
+
 
 class SearchTermTransformerTest(parameterized.TestCase):
 
-  def setUp(self):
-    super().setUp()
-
   @parameterized.named_parameters([{
-    'testcase_name': 'cv > 0 and more than three tokens',
-    'clicks': 6,
-    'conversions': 1,
-    'ctr': 2,
-    'search_term': 'more than three tokens',
-    'status': 'NONE'
+      'testcase_name': 'cv > 0 and more than three tokens',
+      'clicks': 6,
+      'conversions': 1,
+      'ctr': 2,
+      'search_term': 'more than three tokens',
+      'status': 'NONE',
   }, {
-    'testcase_name': 'cv <= 0 but ctr and clicks over threshold and tokens > 3',
-    'clicks': 6,
-    'conversions': 0,
-    'ctr': 2,
-    'search_term': 'more than three tokens',
-    'status': 'UNKNOWN'
+      'testcase_name':
+          'cv <= 0 but ctr and clicks over threshold and tokens > 3',
+      'clicks': 6,
+      'conversions': 0,
+      'ctr': 2,
+      'search_term': 'more than three tokens',
+      'status': 'UNKNOWN',
   }])
   def test_import_transform_search_terms_to_keywords_returns_broad_keywords(
       self, status, search_term, ctr, conversions, clicks):
@@ -50,95 +90,108 @@ class SearchTermTransformerTest(parameterized.TestCase):
         'campaign_id': '12345',
         'campaign_name': 'test_campaign',
         'ctr': ctr,
-        'keyword_text': ''
+        'keyword_text': '',
     }
-    test_search_report_df = pd.DataFrame(
-        [test_search_report], columns=_TEST_SEARCH_REPORT_COLUMNS)
-    test_transformer = search_term_transformer.SearchTermTransformer()
+    test_search_report_df = pd.DataFrame([test_search_report],
+                                         columns=_TEST_SEARCH_REPORT_COLUMNS)
+    search_term_transformer = search_term_transformer_lib.SearchTermTransformer(
+        _DEFAULT_CLICKS_THRESHOLD, _DEFAULT_CONVERSIONS_THRESHOLD,
+        _DEFAULT_SEARCH_TERM_TOKENS_THRESHOLD, _DEFAULT_SA_ACCOUNT_TYPE,
+        _DEFAULT_SA_LABEL)
+    expected_df = _build_expected_df(search_term, [_MATCH_TYPE_BROAD])
 
-    #Act
-    results = test_transformer.transform_search_terms_to_keywords(
+    # Act
+    actual_df = search_term_transformer.transform_search_terms_to_keywords(
         test_search_report_df)
 
-    #Assert
-    self.assertEqual(results.loc[0].at['Keyword match type'], _MATCH_TYPE_BROAD)
+    # Assert
+    pd.testing.assert_frame_equal(actual_df, expected_df)
 
   @parameterized.named_parameters([{
-    'testcase_name': 'cv > 0 but less than 4 tokens',
-    'clicks': 6,
-    'conversions': 1,
-    'ctr': 2,
-    'search_term': 'under four tokens',
-    'status': 'ADDED'
+      'testcase_name': 'cv > 0 but less than 4 tokens',
+      'clicks': 6,
+      'conversions': 1,
+      'ctr': 2,
+      'search_term': 'under four tokens',
+      'status': 'ADDED',
   }, {
-    'testcase_name': 'cv <= 0 but ctr and clicks over threshold and tokens < 4',
-    'clicks': 6,
-    'conversions': 0,
-    'ctr': 2,
-    'search_term': 'under four tokens',
-    'status': 'EXCLUDED'
+      'testcase_name':
+          'cv <= 0 but ctr and clicks over threshold and tokens < 4',
+      'clicks': 6,
+      'conversions': 0,
+      'ctr': 2,
+      'search_term': 'under four tokens',
+      'status': 'EXCLUDED',
   }])
-  def test_import_transform_search_terms_to_keywords_returns_phrase_and_exact_keywords(
+  def test_import_transform_search_terms_to_keywords_returns_exact_and_phrase_keywords(
       self, status, search_term, ctr, conversions, clicks):
     # Arrange
     test_search_report = {
-      'search_term': search_term,
-      'status': status,
-      'conversions': conversions,
-      'clicks': clicks,
-      'ad_group_name': 'test_ad_group',
-      'campaign_id': '12345',
-      'campaign_name': 'test_campaign',
-      'ctr': ctr,
-      'keyword_text': ''
+        'search_term': search_term,
+        'status': status,
+        'conversions': conversions,
+        'clicks': clicks,
+        'ad_group_name': 'test_ad_group',
+        'campaign_id': '12345',
+        'campaign_name': 'test_campaign',
+        'ctr': ctr,
+        'keyword_text': '',
     }
-    test_search_report_df = pd.DataFrame(
-      [test_search_report], columns=_TEST_SEARCH_REPORT_COLUMNS)
-    test_transformer = search_term_transformer.SearchTermTransformer()
+    test_search_report_df = pd.DataFrame([test_search_report],
+                                         columns=_TEST_SEARCH_REPORT_COLUMNS)
+    test_transformer = search_term_transformer_lib.SearchTermTransformer(
+        _DEFAULT_CLICKS_THRESHOLD, _DEFAULT_CONVERSIONS_THRESHOLD,
+        _DEFAULT_SEARCH_TERM_TOKENS_THRESHOLD, _DEFAULT_SA_ACCOUNT_TYPE,
+        _DEFAULT_SA_LABEL)
+    expected_df = _build_expected_df(search_term,
+                                     [_MATCH_TYPE_EXACT, _MATCH_TYPE_PHRASE])
 
     # Act
-    results = test_transformer.transform_search_terms_to_keywords(
-      test_search_report_df)
+    actual_df = test_transformer.transform_search_terms_to_keywords(
+        test_search_report_df)
 
     # Assert
-    self.assertEqual(results.loc[0].at['Keyword match type'], _MATCH_TYPE_PHRASE)
+    pd.testing.assert_frame_equal(actual_df, expected_df)
 
   @parameterized.named_parameters([{
-    'testcase_name': 'cv <= 0 and ctr >= threshold but clicks < 6',
-    'clicks': 4,
-    'conversions': 0,
-    'ctr': 2,
-    'search_term': 'under four tokens',
-    'status': 'ADDED'
+      'testcase_name': 'cv <= 0 and ctr >= threshold but clicks < 6',
+      'clicks': 4,
+      'conversions': 0,
+      'ctr': 2,
+      'search_term': 'under four tokens',
+      'status': 'ADDED',
   }, {
-    'testcase_name': 'cv <= 0 but ctr < threshold',
-    'clicks': 6,
-    'conversions': 0,
-    'ctr': -2,
-    'search_term': 'under four tokens',
-    'status': 'EXCLUDED'
+      'testcase_name': 'cv <= 0 but ctr < threshold',
+      'clicks': 6,
+      'conversions': 0,
+      'ctr': -2,
+      'search_term': 'under four tokens',
+      'status': 'EXCLUDED',
   }])
   def test_import_transform_search_terms_to_keywords_skips_unqualified_rows(
       self, status, search_term, ctr, conversions, clicks):
     # Arrange
     test_search_report = {
-      'search_term': search_term,
-      'status': status,
-      'conversions': conversions,
-      'clicks': clicks,
-      'ad_group_name': 'test_ad_group',
-      'campaign_id': '12345',
-      'campaign_name': 'test_campaign',
-      'ctr': ctr,
-      'keyword_text': ''
+        'search_term': search_term,
+        'status': status,
+        'conversions': conversions,
+        'clicks': clicks,
+        'ad_group_name': 'test_ad_group',
+        'campaign_id': '12345',
+        'campaign_name': 'test_campaign',
+        'ctr': ctr,
+        'keyword_text': '',
     }
-    test_search_report_df = pd.DataFrame(
-      [test_search_report], columns=_TEST_SEARCH_REPORT_COLUMNS)
-    test_transformer = search_term_transformer.SearchTermTransformer()
+    test_search_report_df = pd.DataFrame([test_search_report],
+                                         columns=_TEST_SEARCH_REPORT_COLUMNS)
+    test_transformer = search_term_transformer_lib.SearchTermTransformer(
+        _DEFAULT_CLICKS_THRESHOLD, _DEFAULT_CONVERSIONS_THRESHOLD,
+        _DEFAULT_SEARCH_TERM_TOKENS_THRESHOLD, _DEFAULT_SA_ACCOUNT_TYPE,
+        _DEFAULT_SA_LABEL)
 
     # Act
     results = test_transformer.transform_search_terms_to_keywords(
-      test_search_report_df)
+        test_search_report_df)
 
     # Assert
     self.assertTrue(results.empty)
