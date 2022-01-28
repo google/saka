@@ -1,18 +1,31 @@
 #!/bin/bash
+source ./environment_variables.sh
+
+if echo "$OSTYPE" | grep -q darwin
+then
+  GREEN='\x1B[1;32m'
+  NOCOLOR='\x1B[0m'
+  HYPERLINK='\x1B]8;;'
+else
+  GREEN='\033[1;32m'
+  NOCOLOR='\033[0m'
+  HYPERLINK='\033]8;;'
+fi
+
 print_green() {
   echo -e "${GREEN}$1${NOCOLOR}"
 }
 
 print_green "Initiating installation of SA360 Keyword Automator (SAKA) to GCP..."
 
-source ./environment_variables.sh
-
-print_green "Environment variables loaded."
-
 # Enable the Secret Manager API if it is not enabled yet.
 print_green "Enabling Cloud APIs if necessary..."
 REQUIRED_SERVICES=(
+  cloudbuild.googleapis.com
+  cloudfunctions.googleapis.com
+  logging.googleapis.com
   secretmanager.googleapis.com
+  sourcerepo.googleapis.com
 )
 
 ENABLED_SERVICES=$(gcloud services list)
@@ -45,11 +58,7 @@ gcloud projects add-iam-policy-binding "$GCP_PROJECT_ID" \
     --role=roles/secretmanager.secretAccessor
 
 # Delete Secrets before re-creating them.
-gcloud --quiet secrets delete gads_api_developer_token
-gcloud --quiet secrets delete gads_api_refresh_token
-gcloud --quiet secrets delete gads_api_client_secret
-
-
+gcloud --quiet secrets delete gads_api_yaml_creds
 
 # Create API Secrets in GCP Secret Manager.
 print_green "Storing Google Ads credentials into Cloud Secret Manager..."
