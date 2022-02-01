@@ -32,6 +32,14 @@ _EXPECTED_SA_360_BULKSHEET_COLUMNS = [
     'Label',
 ]
 
+_TEST_AD_GROUP_DF = pd.DataFrame(
+    [{
+        'ad_group_name': 'test_ad_group',
+        'ctr': 0.5,
+    }],
+    columns=['ad_group_name', 'ctr']
+)
+
 
 def _build_expected_df(keyword: str, match_types: List[str]) -> pd.DataFrame:
   """Builds a DataFrame for test assertions.
@@ -66,7 +74,7 @@ class SearchTermTransformerTest(parameterized.TestCase):
       'testcase_name': 'cv > 0 and more than three tokens',
       'clicks': 6,
       'conversions': 1,
-      'ctr': 2,
+      'ctr': 1.0,
       'search_term': 'more than three tokens',
       'status': 'NONE',
   }, {
@@ -74,7 +82,7 @@ class SearchTermTransformerTest(parameterized.TestCase):
           'cv <= 0 but ctr and clicks over threshold and tokens > 3',
       'clicks': 6,
       'conversions': 0,
-      'ctr': 2,
+      'ctr': 1.0,
       'search_term': 'more than three tokens',
       'status': 'UNKNOWN',
   }])
@@ -102,7 +110,7 @@ class SearchTermTransformerTest(parameterized.TestCase):
 
     # Act
     actual_df = search_term_transformer.transform_search_terms_to_keywords(
-        test_search_report_df)
+        test_search_report_df, _TEST_AD_GROUP_DF)
 
     # Assert
     pd.testing.assert_frame_equal(actual_df, expected_df)
@@ -111,7 +119,7 @@ class SearchTermTransformerTest(parameterized.TestCase):
       'testcase_name': 'cv > 0 but less than 4 tokens',
       'clicks': 6,
       'conversions': 1,
-      'ctr': 2,
+      'ctr': 1.0,
       'search_term': 'under four tokens',
       'status': 'ADDED',
   }, {
@@ -119,7 +127,7 @@ class SearchTermTransformerTest(parameterized.TestCase):
           'cv <= 0 but ctr and clicks over threshold and tokens < 4',
       'clicks': 6,
       'conversions': 0,
-      'ctr': 2,
+      'ctr': 1.0,
       'search_term': 'under four tokens',
       'status': 'EXCLUDED',
   }])
@@ -148,7 +156,7 @@ class SearchTermTransformerTest(parameterized.TestCase):
 
     # Act
     actual_df = test_transformer.transform_search_terms_to_keywords(
-        test_search_report_df)
+        test_search_report_df, _TEST_AD_GROUP_DF)
 
     # Assert
     pd.testing.assert_frame_equal(actual_df, expected_df)
@@ -157,14 +165,14 @@ class SearchTermTransformerTest(parameterized.TestCase):
       'testcase_name': 'cv <= 0 and ctr >= threshold but clicks < 6',
       'clicks': 4,
       'conversions': 0,
-      'ctr': 2,
+      'ctr': 1.0,
       'search_term': 'under four tokens',
       'status': 'ADDED',
   }, {
       'testcase_name': 'cv <= 0 but ctr < threshold',
       'clicks': 6,
       'conversions': 0,
-      'ctr': -2,
+      'ctr': 0.4,
       'search_term': 'under four tokens',
       'status': 'EXCLUDED',
   }])
@@ -191,7 +199,7 @@ class SearchTermTransformerTest(parameterized.TestCase):
 
     # Act
     results = test_transformer.transform_search_terms_to_keywords(
-        test_search_report_df)
+        test_search_report_df, _TEST_AD_GROUP_DF)
 
     # Assert
     self.assertTrue(results.empty)
