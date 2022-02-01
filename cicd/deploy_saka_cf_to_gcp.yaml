@@ -1,0 +1,18 @@
+steps:
+  # Run unit tests
+  - name: python:3.8-slim
+    id: SakaUnitTests
+    entrypoint: /bin/sh
+    dir: .
+    args:
+      - -c
+      - |
+        pip install --upgrade pip \
+        && pip install -r cloud_functions/requirements.txt \
+        && python test_runner.py
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args: ['functions', 'deploy', 'saka_etl_function', '--memory', '512MB', '--timeout', '540s', '--set-env-vars', 'GCP_PROJECT_ID=${_GCP_PROJECT_ID},CUSTOMER_ID=${_CUSTOMER_ID},SA360_ACCOUNT_ID=${_SA360_ACCOUNT_ID},SA360_ACCOUNT_NAME=${_SA360_ACCOUNT_NAME},SA360_SFTP_URL=${_SA360_SFTP_URL},SA_ACCOUNT_TYPE=${_SA_ACCOUNT_TYPE},SA_LABEL=${_SA_LABEL},CAMPAIGN_IDS=${_CAMPAIGN_IDS},CLICKS_THRESHOLD=${_CLICKS_THRESHOLD},CONVERSIONS_THRESHOLD=${_CONVERSIONS_THRESHOLD},SEARCH_TERM_TOKENS_THRESHOLD=${_SEARCH_TERM_TOKENS_THRESHOLD}', '--trigger-http', '--runtime', 'python39']
+    dir: cloud_functions
+    waitFor:
+      - "SakaUnitTests"
+timeout: 3600s
