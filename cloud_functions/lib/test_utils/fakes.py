@@ -10,9 +10,16 @@ from unittest import mock
 class FakeStreamRow:
   """A fake row from a Google Ads batch stream result."""
 
-  def __init__(self, search_term: str, status: int, conversions: int,
-               clicks: int, ctr: int, ad_group_name: str, campaign_id: str,
-               campaign_name: str, keyword_text: str) -> None:
+  def __init__(self,
+               search_term: str = '',
+               status: int = -1,
+               conversions: int = -1,
+               clicks: int = -1,
+               ctr: int = -1,
+               ad_group_name: str = '',
+               campaign_id: str = '',
+               campaign_name: str = '',
+               keyword_text: str = '') -> None:
     """Initializes the FakeStreamRow."""
     self.search_term_view = mock.MagicMock()
     self.metrics = mock.MagicMock()
@@ -41,5 +48,3 @@ class FakeStream:
   def __init__(self, rows: List[FakeStreamRow]) -> None:
     """Initializes the FakeStream."""
     self.results = rows
-
-

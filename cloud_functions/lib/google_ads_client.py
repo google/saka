@@ -14,15 +14,39 @@ _CUSTOMER_ID_LENGTH = 10
 _DATE_RANGE = 'LAST_30_DAYS'
 _GOOGLE_ADS_SERVICE_NAME = 'GoogleAdsService'
 _SEARCH_REQUEST_TYPE = 'SearchGoogleAdsStreamRequest'
-_SEARCH_REPORT_COLUMNS = ['search_term',
-                          'status',
-                          'conversions',
-                          'clicks',
-                          'ad_group_name',
-                          'campaign_id',
-                          'campaign_name',
-                          'ctr',
-                          'keyword_text']
+_SEARCH_REPORT_COLUMNS = [
+    'search_term', 'status', 'conversions', 'clicks', 'ad_group_name',
+    'campaign_id', 'campaign_name', 'ctr', 'keyword_text'
+]
+_AD_GROUP_COLUMNS = ['ad_group_name', 'ctr']
+
+_SEARCH_REPORT_QUERY = f"""
+  SELECT
+    search_term_view.search_term,
+    search_term_view.status,
+    metrics.conversions,
+    metrics.clicks,
+    ad_group.name,
+    campaign.id,
+    campaign.name,
+    metrics.ctr,
+    segments.keyword.info.text
+   FROM
+    search_term_view
+   WHERE
+    segments.date DURING {_DATE_RANGE}
+    AND search_term_view.status IN ('NONE', 'UNKNOWN')
+"""
+
+_AD_GROUP_QUERY = f"""
+  SELECT
+    ad_group.name,
+    metrics.ctr
+  FROM
+    ad_group
+  WHERE
+    segments.date DURING {_DATE_RANGE}
+"""
 
 
 class Error(Exception):
@@ -59,9 +83,10 @@ class GoogleAdsClient():
           RuntimeError('Failed to initialize API client. '
                        'Check API credentials are correct. '
                        f'Error: {google_ads_exception}'))
-      raise SAGoogleAdsClientError('Failed to initialize API client. '
-                                   'Check API credentials are correct. '
-                                   f'Error: {google_ads_exception}')
+      raise SAGoogleAdsClientError(
+          'Failed to initialize API client. '
+          'Check API credentials are correct. '
+          f'Error: {google_ads_exception}') from google_ads_exception
 
     self._gads_service = self._gads_client.get_service(_GOOGLE_ADS_SERVICE_NAME)
 
@@ -86,11 +111,11 @@ class GoogleAdsClient():
       SAGoogleAdsClientError: if args are incorrect or an error is encountered
         while processing the request.
     """
-    if len(customer_id) != _CUSTOMER_ID_LENGTH or not customer_id.isdigit():
-      raise SAGoogleAdsClientError(
-          f'Error: customer_id should be a 10-digit string: {customer_id}')
+    self._validate_customer_id(customer_id)
 
-    search_request = self._build_search_request(customer_id, campaign_ids)
+    search_request = self._build_search_request(_SEARCH_REPORT_QUERY,
+                                                customer_id,
+                                                campaign_ids)
 
     try:
       stream = self._gads_service.search_stream(search_request)
@@ -118,16 +143,17 @@ class GoogleAdsClient():
           f'Failed to get search terms report.Error: {google_ads_exception}'))
       raise SAGoogleAdsClientError(
           f'Error: Customer: {customer_id}, campaigns: {campaign_ids}. '
-          f'Failed to get search terms report.Error: {google_ads_exception}')
+          f'Failed to get search terms report.Error: {google_ads_exception}'
+      ) from google_ads_exception
 
     print('Successfully fetched search terms report.')
 
     return pd.DataFrame(results, columns=_SEARCH_REPORT_COLUMNS)
 
-  def _build_search_request(self,
-                            customer_id: str,
-                            campaign_ids: List[str] = None) -> Any:
-    """Builds and returns a search request that can be sent to Google Ads API.
+  def get_ad_groups(self,
+                    customer_id: str,
+                    campaign_ids: List[str] = None) -> pd.DataFrame:
+    """Returns an ad group report in a Pandas DataFrame.
 
     Args:
       customer_id: A 10-digit string representation of a Google Ads customer ID.
@@ -135,33 +161,77 @@ class GoogleAdsClient():
         terms. If empty, all campaigns will be queried.
 
     Returns:
-      A search request that can be sent to Google Ads API.
+      An ad group report in a Pandas DataFrame with the following columns:
+      ad group name, ctr.
+
+    Raises:
+      SAGoogleAdsClientError: if args are incorrect or an error is encountered
+        while processing the request.
     """
-    search_terms_query = f"""
-      SELECT
-        search_term_view.search_term,
-        search_term_view.status,
-        metrics.conversions,
-        metrics.clicks,
-        ad_group.name,
-        campaign.id,
-        campaign.name,
-        metrics.ctr,
-        segments.keyword.info.text
-       FROM
-        search_term_view
-       WHERE
-        segments.date DURING {_DATE_RANGE}
-        AND search_term_view.status IN ('NONE', 'UNKNOWN')
+    self._validate_customer_id(customer_id)
+
+    search_request = self._build_search_request(_AD_GROUP_QUERY,
+                                                customer_id,
+                                                campaign_ids)
+
+    try:
+      stream = self._gads_service.search_stream(search_request)
+
+      results = []
+
+      for batch in stream:
+        for row in batch.results:
+          result = {
+              'ad_group_name': row.ad_group.name,
+              'ctr': row.metrics.ctr,
+          }
+          results.append(result)
+    except google_ads_errors.GoogleAdsException as google_ads_exception:
+      logging.error(RuntimeError(
+          f'Error: Customer: {customer_id}, campaigns: {campaign_ids}. '
+          f'Failed to get ad group report.Error: {google_ads_exception}'))
+      raise SAGoogleAdsClientError(
+          f'Error: Customer: {customer_id}, campaigns: {campaign_ids}. '
+          f'Failed to get ad group report.Error: {google_ads_exception}'
+      ) from google_ads_exception
+
+    print('Successfully fetched ad group report.')
+
+    return pd.DataFrame(results, columns=_AD_GROUP_COLUMNS)
+
+  def _validate_customer_id(self, customer_id: str) -> None:
+    """Raises an exception if the customer id is not valid.
+
+    Args:
+      customer_id: A 10-digit string representation of a Google Ads customer ID.
+    """
+    if len(customer_id) != _CUSTOMER_ID_LENGTH or not customer_id.isdigit():
+      raise SAGoogleAdsClientError(
+          f'Error: customer_id should be a 10-digit string: {customer_id}')
+
+  def _build_search_request(self,
+                            query: str,
+                            customer_id: str,
+                            campaign_ids: List[str] = None) -> Any:
+    """Builds and returns a search request that can be sent to Google Ads API.
+
+    Args:
+      query: The Google Ads API query.
+      customer_id: A 10-digit string representation of a Google Ads customer ID.
+      campaign_ids: A list of campaign_ids to query when retrieving search
+        terms. If empty, all campaigns will be queried.
+
+    Returns:
+      A search request that can be sent to Google Ads API.
     """
 
     if campaign_ids:
       campaign_ids = [str(campaign_id) for campaign_id in campaign_ids]
       campaign_id_query_str = ','.join(campaign_ids)
-      search_terms_query += f' AND campaign.id IN ({campaign_id_query_str})'
+      query += f' AND campaign.id IN ({campaign_id_query_str})'
 
     search_request = self._gads_client.get_type(_SEARCH_REQUEST_TYPE)
     search_request.customer_id = customer_id
-    search_request.query = search_terms_query
+    search_request.query = query
 
     return search_request
