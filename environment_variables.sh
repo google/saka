@@ -2,7 +2,7 @@
 
 GCP_PROJECT_ID=#[GCP Project ID]
 SOURCE_REPO=#[Name of the Git Cloud Source Repository to create]
-
+LOCATION=us-central1
 CUSTOMER_ID=#[Customer ID]
 
 GADS_CLIENT_ID=#[Google Ads Client ID]
@@ -10,9 +10,10 @@ GADS_DEVELOPER_TOKEN=#[Google Ads Developer Token]
 GADS_REFRESH_TOKEN=#[Google Ads Refresh Token]
 GADS_CLIENT_SECRET=#[Google Ads Client Secret]
 
-SA360_ACCOUNT_ID=#[SA360 Account ID]
-SA360_ACCOUNT_NAME=#[SA360 Account Name]
-SA360_SFTP_URL=#[SA360 SFTP URL]
+SA360_SFTP_HOSTNAME=#[SA360 SFTP Hostname]
+SA360_SFTP_PORT=#[SA360 SFTP Port]
+SA360_SFTP_USERNAME=#[SA360 SFTP Username]
+SA360_SFTP_PASSWORD=#[SA360 SFTP Password]
 SA_ACCOUNT_TYPE=#[SA360 Account Type]
 SA_LABEL=#[SA360 Keyword Label]
 
