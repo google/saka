@@ -59,12 +59,17 @@ gcloud projects add-iam-policy-binding "$GCP_PROJECT_ID" \
 
 # Delete Secrets before re-creating them.
 gcloud --quiet secrets delete gads_api_yaml_creds
+gcloud --quiet secrets delete sa360_sftp_password
 
 # Create API Secrets in GCP Secret Manager.
-print_green "Storing Google Ads credentials into Cloud Secret Manager..."
+print_green "Storing Google Ads and SA360 credentials into Cloud Secret Manager..."
 
-GADS_YAML_CREDS="{\n  \"developer_token\": $GADS_DEVELOPER_TOKEN,\n  \"refresh_token\": $GADS_REFRESH_TOKEN,\n  \"client_id\": $GADS_CLIENT_ID,\n  \"client_secret\": $GADS_CLIENT_SECRET,\n  \"login_customer_id\": $CUSTOMER_ID,\n  \"use_proto_plus\": \"True\"\n}"
-echo -n "$GADS_YAML_CREDS" | gcloud secrets create gads_api_yaml_creds \
+GADS_YAML_CREDS="{\n  \"developer_token\": \"$GADS_DEVELOPER_TOKEN\",\n  \"refresh_token\": \"$GADS_REFRESH_TOKEN\",\n  \"client_id\": \"$GADS_CLIENT_ID\",\n  \"client_secret\": \"$GADS_CLIENT_SECRET\",\n  \"login_customer_id\": \"$CUSTOMER_ID\",\n  \"use_proto_plus\": \"True\"\n}"
+echo "$GADS_YAML_CREDS" | gcloud secrets create gads_api_yaml_creds \
+    --replication-policy="automatic" \
+    --data-file=-
+
+echo "$SA360_SFTP_PASSWORD" | gcloud secrets create sa360_sftp_password \
     --replication-policy="automatic" \
     --data-file=-
 
@@ -105,6 +110,11 @@ done
 
 CreateTrigger deploy_saka_cf_to_gcp.yaml \
   "SAKA Deploy Cloud Function" \
-  _GCP_PROJECT_ID="$GCP_PROJECT_ID"::_CUSTOMER_ID="$CUSTOMER_ID"::_SA360_ACCOUNT_ID="$SA360_ACCOUNT_ID"::_SA360_ACCOUNT_NAME="$SA360_ACCOUNT_NAME"::_SA360_SFTP_URL="$SA360_SFTP_URL"::_SA_ACCOUNT_TYPE="$SA_ACCOUNT_TYPE"::_SA_LABEL="$SA_LABEL"::_CAMPAIGN_IDS="$CAMPAIGN_IDS"::_CLICKS_THRESHOLD="$CLICKS_THRESHOLD"::_CONVERSIONS_THRESHOLD="$CONVERSIONS_THRESHOLD"::_SEARCH_TERM_TOKENS_THRESHOLD="$SEARCH_TERM_TOKENS_THRESHOLD"
+  _GCP_PROJECT_ID="$GCP_PROJECT_ID"::_CUSTOMER_ID="$CUSTOMER_ID"::_SA360_SFTP_HOSTNAME="$SA360_SFTP_HOSTNAME"::_SA360_SFTP_PORT="$SA360_SFTP_PORT"::_SA360_SFTP_USERNAME="$SA360_SFTP_USERNAME"::_SA_ACCOUNT_TYPE="$SA_ACCOUNT_TYPE"::_SA_LABEL="$SA_LABEL"::_CAMPAIGN_IDS="$CAMPAIGN_IDS"::_CLICKS_THRESHOLD="$CLICKS_THRESHOLD"::_CONVERSIONS_THRESHOLD="$CONVERSIONS_THRESHOLD"::_SEARCH_TERM_TOKENS_THRESHOLD="$SEARCH_TERM_TOKENS_THRESHOLD"
+
+
+# Create the Cloud Scheduler entry to be able to trigger the HTTP function.
+$TRIGGER_URL="https://${LOCATION}-${GCP_PROJECT_ID}.cloudfunctions.net/saka_etl_function"
+gcloud scheduler jobs create http triggerSakaFunction --schedule="0 12 * * *" --uri="$TRIGGER_URL" --oidc-service-account-email="$CF_SERVICE_ACCOUNT"
 
 print_green "Installation and setup of SAKA finished. Please deploy via Cloud Build by pushing the code to your source repository at ${HYPERLINK}https://source.cloud.google.com/$GCP_PROJECT_ID/$SOURCE_REPO\ahttps://source.cloud.google.com/$GCP_PROJECT_ID/$SOURCE_REPO${HYPERLINK}\a"
