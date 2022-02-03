@@ -4,7 +4,7 @@ See class docstring for more details.
 """
 
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 from google.ads.googleads import client as google_ads_client
 from google.ads.googleads import errors as google_ads_errors
@@ -94,13 +94,13 @@ class GoogleAdsClient():
 
   def get_search_terms(self,
                        customer_id: str,
-                       campaign_ids: List[str] = None) -> pd.DataFrame:
+                       campaign_ids: str = None) -> pd.DataFrame:
     """Returns a search term report in a Pandas DataFrame.
 
     Args:
       customer_id: A 10-digit string representation of a Google Ads customer ID.
-      campaign_ids: A list of campaign_ids to query when retrieving search
-        terms. If empty, all campaigns will be queried.
+      campaign_ids: A comma-separated string of campaign_ids to query when
+      retrieving search terms. If empty, all campaigns will be queried.
 
     Returns:
       A search term report in a Pandas DataFrame with the following columns:
@@ -127,12 +127,12 @@ class GoogleAdsClient():
           result = {
               'search_term': row.search_term_view.search_term,
               'status': row.search_term_view.status,
-              'conversions': row.metrics.conversions,
-              'clicks': row.metrics.clicks,
+              'conversions': float(row.metrics.conversions),
+              'clicks': float(row.metrics.clicks),
               'ad_group_name': row.ad_group.name,
               'campaign_id': row.campaign.id,
               'campaign_name': row.campaign.name,
-              'ctr': row.metrics.ctr,
+              'ctr': float(row.metrics.ctr),
               'keyword_text': row.segments.keyword.info.text,
           }
 
@@ -152,13 +152,13 @@ class GoogleAdsClient():
 
   def get_ad_groups(self,
                     customer_id: str,
-                    campaign_ids: List[str] = None) -> pd.DataFrame:
+                    campaign_ids: str = None) -> pd.DataFrame:
     """Returns an ad group report in a Pandas DataFrame.
 
     Args:
       customer_id: A 10-digit string representation of a Google Ads customer ID.
-      campaign_ids: A list of campaign_ids to query when retrieving search
-        terms. If empty, all campaigns will be queried.
+      campaign_ids: A comma-separated string of campaign_ids to query when
+        retrieving ad groups. If empty, all campaigns will be queried.
 
     Returns:
       An ad group report in a Pandas DataFrame with the following columns:
@@ -183,7 +183,7 @@ class GoogleAdsClient():
         for row in batch.results:
           result = {
               'ad_group_name': row.ad_group.name,
-              'ctr': row.metrics.ctr,
+              'ctr': float(row.metrics.ctr),
           }
           results.append(result)
     except google_ads_errors.GoogleAdsException as google_ads_exception:
@@ -212,23 +212,21 @@ class GoogleAdsClient():
   def _build_search_request(self,
                             query: str,
                             customer_id: str,
-                            campaign_ids: List[str] = None) -> Any:
+                            campaign_ids: str = None) -> Any:
     """Builds and returns a search request that can be sent to Google Ads API.
 
     Args:
       query: The Google Ads API query.
       customer_id: A 10-digit string representation of a Google Ads customer ID.
-      campaign_ids: A list of campaign_ids to query when retrieving search
-        terms. If empty, all campaigns will be queried.
+      campaign_ids: A comma-separated string of campaign_ids to query. If empty,
+        all campaigns will be queried.
 
     Returns:
       A search request that can be sent to Google Ads API.
     """
 
     if campaign_ids:
-      campaign_ids = [str(campaign_id) for campaign_id in campaign_ids]
-      campaign_id_query_str = ','.join(campaign_ids)
-      query += f' AND campaign.id IN ({campaign_id_query_str})'
+      query += f' AND campaign.id IN ({campaign_ids})'
 
     search_request = self._gads_client.get_type(_SEARCH_REQUEST_TYPE)
     search_request.customer_id = customer_id

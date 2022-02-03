@@ -13,9 +13,9 @@ _FAKE_SEARCH_TERM_STREAM = [
         fakes.FakeStreamRow(
             search_term='Search term 1',
             status=0,
-            conversions=10,
-            clicks=20,
-            ctr=1,
+            conversions=10.0,
+            clicks=20.0,
+            ctr=1.0,
             ad_group_name='ad group 1',
             campaign_id='123',
             campaign_name='Campaign 1',
@@ -23,9 +23,9 @@ _FAKE_SEARCH_TERM_STREAM = [
         fakes.FakeStreamRow(
             search_term='Search term 2',
             status=0,
-            conversions=20,
-            clicks=30,
-            ctr=1,
+            conversions=20.0,
+            clicks=30.0,
+            ctr=1.0,
             ad_group_name='ad group 2',
             campaign_id='456',
             campaign_name='Campaign 2',
@@ -33,9 +33,9 @@ _FAKE_SEARCH_TERM_STREAM = [
         fakes.FakeStreamRow(
             search_term='Search term 3',
             status=0,
-            conversions=40,
-            clicks=50,
-            ctr=1,
+            conversions=40.0,
+            clicks=50.0,
+            ctr=1.0,
             ad_group_name='ad group 3',
             campaign_id='789',
             campaign_name='Campaign 3',
@@ -140,7 +140,8 @@ class GoogleAdsTest(unittest.TestCase):
       google_ads_client = google_ads_client_lib.GoogleAdsClient({})
 
       # Act
-      actual_df = google_ads_client.get_search_terms(customer_id='0123456789')
+      actual_df = google_ads_client.get_search_terms(customer_id='0123456789',
+                                                     campaign_ids='123,456,789')
 
       # Assert
       pd.testing.assert_frame_equal(expected_df, actual_df)
