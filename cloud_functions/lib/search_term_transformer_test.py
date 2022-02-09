@@ -21,6 +21,8 @@ _TEST_SEARCH_REPORT_COLUMNS = [
     'campaign_id', 'campaign_name', 'ctr', 'keyword_text'
 ]
 
+_TEST_AD_GROUP_COLUMNS = ['ad_group_name', 'ctr']
+
 _EXPECTED_SA_360_BULKSHEET_COLUMNS = [
     'Row Type',
     'Action',
@@ -37,7 +39,7 @@ _TEST_AD_GROUP_DF = pd.DataFrame(
         'ad_group_name': 'test_ad_group',
         'ctr': 0.5,
     }],
-    columns=['ad_group_name', 'ctr']
+    columns=_TEST_AD_GROUP_COLUMNS
 )
 
 
@@ -86,7 +88,7 @@ class SearchTermTransformerTest(parameterized.TestCase):
       'search_term': 'more than three tokens',
       'status': 'UNKNOWN',
   }])
-  def test_import_transform_search_terms_to_keywords_returns_broad_keywords(
+  def test_transform_search_terms_to_keywords_returns_broad_keywords(
       self, status, search_term, ctr, conversions, clicks):
     # Arrange
     test_search_report = {
@@ -131,7 +133,7 @@ class SearchTermTransformerTest(parameterized.TestCase):
       'search_term': 'under four tokens',
       'status': 'EXCLUDED',
   }])
-  def test_import_transform_search_terms_to_keywords_returns_exact_and_phrase_keywords(
+  def test_transform_search_terms_to_keywords_returns_exact_and_phrase_keywords(
       self, status, search_term, ctr, conversions, clicks):
     # Arrange
     test_search_report = {
@@ -176,7 +178,7 @@ class SearchTermTransformerTest(parameterized.TestCase):
       'search_term': 'under four tokens',
       'status': 'EXCLUDED',
   }])
-  def test_import_transform_search_terms_to_keywords_skips_unqualified_rows(
+  def test_transform_search_terms_to_keywords_skips_unqualified_rows(
       self, status, search_term, ctr, conversions, clicks):
     # Arrange
     test_search_report = {
@@ -200,6 +202,21 @@ class SearchTermTransformerTest(parameterized.TestCase):
     # Act
     results = test_transformer.transform_search_terms_to_keywords(
         test_search_report_df, _TEST_AD_GROUP_DF)
+
+    # Assert
+    self.assertTrue(results.empty)
+
+  def test_transform_search_terms_to_keywords_empty_input(self):
+    # Arrange
+    test_transformer = search_term_transformer_lib.SearchTermTransformer(
+        _DEFAULT_CLICKS_THRESHOLD, _DEFAULT_CONVERSIONS_THRESHOLD,
+        _DEFAULT_SEARCH_TERM_TOKENS_THRESHOLD, _DEFAULT_SA_ACCOUNT_TYPE,
+        _DEFAULT_SA_LABEL)
+
+    # Act
+    results = test_transformer.transform_search_terms_to_keywords(
+        pd.DataFrame(columns=_TEST_SEARCH_REPORT_COLUMNS),
+        pd.DataFrame(columns=_TEST_AD_GROUP_COLUMNS))
 
     # Assert
     self.assertTrue(results.empty)

@@ -62,7 +62,7 @@ class SearchTermTransformer():
     Returns:
       A DataFrame of keywords that are intended to be uploaded to SA360.
     """
-    sa_360_bulksheet_df = pd.DataFrame(columns=_SA_360_BULKSHEET_COLUMNS)
+    rows = []
 
     for _, search_term_row in search_results_df.iterrows():
 
@@ -75,7 +75,7 @@ class SearchTermTransformer():
         if not match_type:
           continue
 
-        row = {
+        rows.append({
             'Row Type': 'keyword',
             'Action': 'create',
             'Account': self._sa_account_type,
@@ -84,11 +84,9 @@ class SearchTermTransformer():
             'Keyword': search_term_row['search_term'],
             'Keyword match type': match_type,
             'Label': self._sa_label
-        }
+        })
 
-        sa_360_bulksheet_df = sa_360_bulksheet_df.append(row, ignore_index=True)
-
-    return sa_360_bulksheet_df
+    return pd.DataFrame(rows, columns=_SA_360_BULKSHEET_COLUMNS)
 
   def _get_match_type(self,
                       search_term_row: pd.Series,
