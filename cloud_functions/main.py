@@ -1,93 +1,211 @@
-"""Cloud Function for SAKA ETL pipeline: gAds search terms to SA360 keywords."""
+"""Cloud Function to add Google Ads search terms as keywords via SA360."""
 import json
 import os
+from typing import Dict
 
-from typing import Dict, Tuple
-
+import flask
 from google.cloud import secretmanager
-
 from lib import google_ads_client as google_ads_client_lib
+from lib import sa360_client as sa360_client_lib
 from lib import search_term_transformer as search_term_transformer_lib
 
 _DEFAULT_CLICKS_THRESHOLD = 5
 _DEFAULT_CONVERSIONS_THRESHOLD = 0
 _DEFAULT_SEARCH_TERM_TOKENS_THRESHOLD = 3
-_DEFAULT_SA_ACCOUNT_TYPE = 'Google'
-_DEFAULT_SA_LABEL = 'SA_add'
+_DEFAULT_SA360_ACCOUNT_TYPE = 'Google'
+_DEFAULT_SA360_LABEL = 'SA_add'
+
+_SA360_SFTP_HOSTNAME = 'partnerupload.google.com'
+_SA360_SFTP_PORT = 19321
+
+# Secrets
+_GOOGLE_ADS_API_CREDENTIALS = 'google_ads_api_credentials'
+_SA360_SFTP_PASSWORD = 'sa360_sftp_password'
+
+# Environment variables
+_GPC_PROJECT_ID = 'GCP_PROJECT_ID'
+_CUSTOMER_ID = 'CUSTOMER_ID'
+_SA360_SFTP_USERNAME = 'SA360_SFTP_USERNAME'
+_SA360_ACCOUNT_TYPE = 'SA360_ACCOUNT_TYPE'
+_SA360_LABEL = 'SA360_LABEL'
+
+_CLICKS_THRESHOLD = 'CLICKS_THRESHOLD'
+_CONVERSIONS_THRESHOLD = 'CONVERSIONS_THRESHOLD'
+_SEARCH_TERMS_TOKENS_THRESHOLD = 'SEARCH_TERMS_TOKENS_THRESHOLD'
+
+_CAMPAIGN_IDS = 'CAMPAIGN_IDS'
+
+_REQUIRED_STR_SETTINGS = {
+    _GPC_PROJECT_ID: '',
+    _CUSTOMER_ID: '',
+    _SA360_SFTP_USERNAME: '',
+    _SA360_ACCOUNT_TYPE: _DEFAULT_SA360_ACCOUNT_TYPE,
+    _SA360_LABEL: _DEFAULT_SA360_LABEL,
+}
+
+_REQUIRED_NUMERIC_SETTINGS = {
+    _CLICKS_THRESHOLD: _DEFAULT_CLICKS_THRESHOLD,
+    _CONVERSIONS_THRESHOLD: _DEFAULT_CONVERSIONS_THRESHOLD,
+    _SEARCH_TERMS_TOKENS_THRESHOLD: _DEFAULT_SEARCH_TERM_TOKENS_THRESHOLD,
+}
+
+_OPTIONAL_SETTINGS = [
+    _CAMPAIGN_IDS,
+]
 
 
-def saka_etl_function(request) -> None:
+def extract_and_upload_keywords(request: flask.Request) -> str:
   """Cloud Function ("CF") triggered by Cloud Scheduler.
 
-     This function orchestrates an ETL pipeline from Google Ads API to SA360.
+     This function orchestrates an ETL pipeline to read search terms from
+     Google Ads API and upload them as Ad Group keywords to SA360 via Bulksheet.
 
   Args:
-      request: The request sent to the Cloud Function.
-
-  Raises:
-    RuntimeError: A dependency was not found, requiring this CF to exit.
+      request: The request sent to the Cloud Function. Required for Google Cloud
+        Functions. (Unused)
 
   Returns:
-      None. The output is written to Cloud logging.
+      The response string. Required for Google Cloud Functions.
   """
   del request
-  (gcp_project_id, customer_id, campaign_ids, clicks_threshold,
-   conversions_threshold, search_term_tokens_threshold, sa_account_type,
-   sa_label) = retrieve_environment_variables()
-  gads_credentials = retrieve_gads_credentials(gcp_project_id)
-  google_ads_client = google_ads_client_lib.GoogleAdsClient(gads_credentials)
 
-  # TODO(akort) validate/convert types of env vars to ints if necessary
+  settings = _load_settings()
+  _sanitize_settings(settings)
 
-  search_terms_df = google_ads_client.get_search_terms(customer_id,
-                                                       campaign_ids)
+  # Fetches search terms from Google Ads API.
+  google_ads_api_credentials = _retrieve_secret(settings[_GPC_PROJECT_ID],
+                                                _GOOGLE_ADS_API_CREDENTIALS)
 
+  if not google_ads_api_credentials:
+    raise ValueError(f'Secret not found in Secret Manager. '
+                     f'Project: "{settings[_GPC_PROJECT_ID]}",'
+                     f'Secret Name: "{_GOOGLE_ADS_API_CREDENTIALS}".')
+
+  google_ads_api_credentials = json.loads(google_ads_api_credentials)
+
+  google_ads_client = google_ads_client_lib.GoogleAdsClient(
+      google_ads_api_credentials)
+
+  search_terms_df = google_ads_client.get_search_terms(settings[_CUSTOMER_ID],
+                                                       settings[_CAMPAIGN_IDS])
+
+  print(f'Fetched {len(search_terms_df)} search term row(s) from Google Ads.')
+
+  # Fetches Ad Group stats from Google Ads API.
+  ad_groups_df = google_ads_client.get_ad_groups(settings[_CUSTOMER_ID],
+                                                 settings[_CAMPAIGN_IDS])
+
+  print(f'Fetched {len(ad_groups_df)} Ad Group row(s) from Google Ads.')
+
+  # Filters search terms for uploading to SA 360.
   search_term_transformer = search_term_transformer_lib.SearchTermTransformer(
-      clicks_threshold, conversions_threshold, search_term_tokens_threshold,
-      sa_account_type, sa_label)
+      settings[_CLICKS_THRESHOLD],
+      settings[_CONVERSIONS_THRESHOLD],
+      settings[_SEARCH_TERMS_TOKENS_THRESHOLD],
+      settings[_SA360_ACCOUNT_TYPE],
+      settings[_SA360_LABEL])
+
   sa360_bulksheet_df = search_term_transformer.transform_search_terms_to_keywords(
-      search_terms_df)
+      search_terms_df, ad_groups_df)
 
-  print(f'Search terms df: {search_terms_df}')
+  if sa360_bulksheet_df.empty:
+    # No keywords found after filtering: exits the function.
+    return 'Finished: No keywords found to upload to SA 360.'
 
-  print(f'SA360 Bulksheet df: {sa360_bulksheet_df}')
+  print(f'Found {len(sa360_bulksheet_df)} row(s) to upload to SA 360.')
 
-  print(f'SA360 Bulksheet df CSV: {sa360_bulksheet_df.to_csv()}')
+  # Uploads data to SA 360 via Bulksheet.
+  sa_360_sftp_password = _retrieve_secret(settings[_GPC_PROJECT_ID],
+                                          _SA360_SFTP_PASSWORD)
 
-  return 'Exiting SAKA Cloud Function.'
+  if not sa_360_sftp_password:
+    raise ValueError(f'Secret not found in Secret Manager. '
+                     f'Project: "{settings[_GPC_PROJECT_ID]}",'
+                     f'Secret Name: "{_SA360_SFTP_PASSWORD}".')
+
+  sa360_client = sa360_client_lib.SA360Client(_SA360_SFTP_HOSTNAME,
+                                              _SA360_SFTP_PORT,
+                                              settings[_SA360_SFTP_USERNAME],
+                                              sa_360_sftp_password)
+
+  sa360_client.upload_keywords_to_sa360(sa360_bulksheet_df)
+
+  return f'Success: Uploaded bulksheet with {len(sa360_bulksheet_df)} row(s).'
 
 
-def retrieve_gads_credentials(gcp_project_id: str) -> Dict[str, str]:
-  """Helper function that gets Google Ads API credentials from Secret Manager."""
+def _load_settings() -> Dict[str, str]:
+  """Loads Cloud Function environment variables into settings.
+
+  Returns:
+    A dictionary of setting names to values.
+  """
+  settings = {}
+
+  for str_setting_name, default in _REQUIRED_STR_SETTINGS.items():
+    settings[str_setting_name] = os.environ.get(str_setting_name, default)
+
+  for numeric_setting_name, default in _REQUIRED_NUMERIC_SETTINGS.items():
+    settings[numeric_setting_name] = os.environ.get(numeric_setting_name,
+                                                    default)
+
+  for optional_setting in _OPTIONAL_SETTINGS:
+    settings[optional_setting] = os.environ.get(optional_setting, '')
+
+  return settings
+
+
+def _sanitize_settings(settings: Dict[str, str]) -> None:
+  """Checks and sanitizes Cloud Function settings.
+
+  Args:
+    settings: The settings for this function loaded from environment variables.
+
+  Raises:
+    ValueError: If a setting was not set correctly.
+  """
+  # Checks and sanitizes String settings.
+  for required_str_setting in _REQUIRED_STR_SETTINGS:
+    str_setting_value = settings[required_str_setting].strip()
+    if not str_setting_value:
+      raise ValueError(
+          f'Environment variable not set: "{required_str_setting}"')
+    else:
+      settings[required_str_setting] = str_setting_value
+
+  # Checks and converts numeric settings.
+  for required_numeric_setting in _REQUIRED_NUMERIC_SETTINGS:
+    try:
+      numeric_setting_value = float(settings[required_numeric_setting])
+    except ValueError as value_error:
+      raise ValueError(
+          f'Environment variable could not be converted to float: '
+          f'"{required_numeric_setting}"') from value_error
+
+    settings[required_numeric_setting] = numeric_setting_value
+
+  # Sanitizes campaign ids.
+  campaign_ids = settings[_CAMPAIGN_IDS].strip()
+
+  # Strips trailing comma.
+  if campaign_ids and campaign_ids[-1] == ',':
+    settings[_CAMPAIGN_IDS] = campaign_ids[:-1]
+
+
+def _retrieve_secret(gcp_project_id: str, secret_name: str) -> str:
+  """Retrieves the value of the specified secret from Secret Manager.
+
+  Args:
+    gcp_project_id: The ID for this GCP project.
+    secret_name: The name of the secret to retrieve.
+
+  Returns:
+    A string containing the secret value.
+  """
   secret_manager_client = secretmanager.SecretManagerServiceClient()
 
-  # Access the secret version.
   secret_name = (
-      f'projects/{gcp_project_id}/secrets/gads_api_yaml_creds/versions/latest')
+      f'projects/{gcp_project_id}/secrets/{secret_name}/versions/latest')
   secret_response = secret_manager_client.access_secret_version(
       request={'name': secret_name})
-  secret_contents = secret_response.payload.data.decode('UTF-8')
-  gads_credentials = json.loads(secret_contents)
 
-  print('The credentials retrieved from Secret Manager was: {}'.format(
-      gads_credentials))
-
-  return gads_credentials
-
-
-def retrieve_environment_variables() -> Tuple[str, ...]:
-  """Helper function that reads in the CF's environment variables."""
-  gcp_project_id = os.environ.get('GCP_PROJECT_ID',
-                                  'GCP_PROJECT_ID is not set.')
-  customer_id = os.environ.get('CUSTOMER_ID', 'CUSTOMER_ID is not set.')
-  campaign_ids = os.environ.get('CAMPAIGN_IDS', '')
-  clicks_threshold = os.environ.get('CLICKS_THRESHOLD',
-                                    _DEFAULT_CLICKS_THRESHOLD)
-  conversions_threshold = os.environ.get('CONVERSIONS_THRESHOLD',
-                                         _DEFAULT_CONVERSIONS_THRESHOLD)
-  search_term_tokens_threshold = os.environ.get(
-      'SEARCH_TERM_TOKENS_THRESHOLD', _DEFAULT_SEARCH_TERM_TOKENS_THRESHOLD)
-  sa_account_type = os.environ.get('SA_ACCOUNT_TYPE', _DEFAULT_SA_ACCOUNT_TYPE)
-  sa_label = os.environ.get('SA_LABEL', _DEFAULT_SA_LABEL)
-
-  return gcp_project_id, customer_id, campaign_ids, clicks_threshold, conversions_threshold, search_term_tokens_threshold, sa_account_type, sa_label
+  return secret_response.payload.data.decode('UTF-8')
