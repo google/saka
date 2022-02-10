@@ -12,11 +12,11 @@ _MATCH_TYPE_EXACT = 'exact'
 _MATCH_TYPE_PHRASE = 'phrase'
 
 _SA_360_BULKSHEET_COLUMNS = [
-    'Row Type',
+    'Row type',
     'Action',
     'Account',
     'Campaign',
-    'Ad Group',
+    'Ad group',
     'Keyword',
     'Keyword match type',
     'Label',
@@ -76,11 +76,11 @@ class SearchTermTransformer():
           continue
 
         rows.append({
-            'Row Type': 'keyword',
+            'Row type': 'keyword',
             'Action': 'create',
             'Account': self._sa_account_type,
-            'Campaign': search_term_row['campaign_id'],
-            'Ad Group': search_term_row['ad_group_name'],
+            'Campaign': search_term_row['campaign_name'],
+            'Ad group': search_term_row['ad_group_name'],
             'Keyword': search_term_row['search_term'],
             'Keyword match type': match_type,
             'Label': self._sa_label

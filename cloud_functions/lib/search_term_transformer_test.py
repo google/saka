@@ -24,11 +24,11 @@ _TEST_SEARCH_REPORT_COLUMNS = [
 _TEST_AD_GROUP_COLUMNS = ['ad_group_name', 'ctr']
 
 _EXPECTED_SA_360_BULKSHEET_COLUMNS = [
-    'Row Type',
+    'Row type',
     'Action',
     'Account',
     'Campaign',
-    'Ad Group',
+    'Ad group',
     'Keyword',
     'Keyword match type',
     'Label',
@@ -57,11 +57,11 @@ def _build_expected_df(keyword: str, match_types: List[str]) -> pd.DataFrame:
 
   for match_type in match_types:
     rows.append({
-        'Row Type': 'keyword',
+        'Row type': 'keyword',
         'Action': 'create',
         'Account': 'Google',
-        'Campaign': '12345',
-        'Ad Group': 'test_ad_group',
+        'Campaign': 'test_campaign',
+        'Ad group': 'test_ad_group',
         'Keyword': keyword,
         'Keyword match type': match_type,
         'Label': 'SA_add',
