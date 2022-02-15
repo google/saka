@@ -208,4 +208,4 @@ def _retrieve_secret(gcp_project_id: str, secret_name: str) -> str:
   secret_response = secret_manager_client.access_secret_version(
       request={'name': secret_name})
 
-  return secret_response.payload.data.decode('UTF-8')
+  return secret_response.payload.data.decode('UTF-8').strip()
