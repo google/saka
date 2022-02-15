@@ -23,7 +23,9 @@ print_green "Enabling Cloud APIs if necessary..."
 REQUIRED_SERVICES=(
   cloudbuild.googleapis.com
   cloudfunctions.googleapis.com
+  cloudscheduler.googleapis.com
   logging.googleapis.com
+  pubsub.googleapis.com
   secretmanager.googleapis.com
   sourcerepo.googleapis.com
 )
@@ -41,7 +43,26 @@ do
   fi
 done
 
-# Create a new Cloud Source Repository for Git
+
+# Create Cloud Pub/Sub topics.
+print_green "Creating PubSub topics and subscriptions..."
+REQUIRED_TOPICS=(
+  "$PUBSUB_TOPIC"
+)
+EXISTING_TOPICS=$(gcloud pubsub topics list)
+for TOPIC in "${REQUIRED_TOPICS[@]}"
+do
+  if echo "$EXISTING_TOPICS" | grep -q "$TOPIC"
+  then
+    echo "Pub/Sub topic $TOPIC already exists."
+  else
+    gcloud pubsub topics create "$TOPIC" \
+      && echo "Pub/Sub topic $TOPIC has been successfully created."
+    sleep 1
+  fi
+done
+
+# Create a new Cloud Source Repository for Git.
 print_green "Creating the Git repository..."
 EXISTING_REPOS="$(gcloud source repos list --filter="$SOURCE_REPO")"
 if echo "$EXISTING_REPOS" | grep -q -w "$SOURCE_REPO"
@@ -73,7 +94,7 @@ echo "$SA360_SFTP_PASSWORD" | gcloud secrets create sa360_sftp_password \
     --replication-policy="automatic" \
     --data-file=-
 
-# Setup Service Accounts and grant permissions
+# Setup Service Accounts and grant permissions.
 print_green "Setting up service account permissions..."
 PROJECT_NUMBER=$(gcloud projects list --filter="PROJECT_ID=$GCP_PROJECT_ID" --format="value(PROJECT_NUMBER)")
 gcloud projects add-iam-policy-binding "$GCP_PROJECT_ID" \
@@ -109,12 +130,11 @@ do
 done
 
 CreateTrigger deploy_saka_cf_to_gcp.yaml \
-  "SAKA Deploy Cloud Function" \
-  _GCP_PROJECT_ID="$GCP_PROJECT_ID"::_CUSTOMER_ID="$CUSTOMER_ID"::_SA360_SFTP_USERNAME="$SA360_SFTP_USERNAME"::_SA360_ACCOUNT_NAME="$SA360_ACCOUNT_NAME"::_SA360_LABEL="$SA360_LABEL"::_CAMPAIGN_IDS="$CAMPAIGN_IDS"::_CLICKS_THRESHOLD="$CLICKS_THRESHOLD"::_CONVERSIONS_THRESHOLD="$CONVERSIONS_THRESHOLD"::_SEARCH_TERM_TOKENS_THRESHOLD="$SEARCH_TERM_TOKENS_THRESHOLD"
+  "Deploy SAKA Cloud Function" \
+  _GCP_PROJECT_ID="$GCP_PROJECT_ID"::_CUSTOMER_ID="$CUSTOMER_ID"::_SA360_SFTP_USERNAME="$SA360_SFTP_USERNAME"::_SA360_ACCOUNT_NAME="$SA360_ACCOUNT_NAME"::_SA360_LABEL="$SA360_LABEL"::_CAMPAIGN_IDS="$CAMPAIGN_IDS"::_CLICKS_THRESHOLD="$CLICKS_THRESHOLD"::_CONVERSIONS_THRESHOLD="$CONVERSIONS_THRESHOLD"::_SEARCH_TERM_TOKENS_THRESHOLD="$SEARCH_TERM_TOKENS_THRESHOLD"::_PUBSUB_TOPIC="$PUBSUB_TOPIC"
 
 
-# Create the Cloud Scheduler entry to be able to trigger the HTTP function.
-$TRIGGER_URL="https://${LOCATION}-${GCP_PROJECT_ID}.cloudfunctions.net/extract_and_upload_keywords"
-gcloud scheduler jobs create http triggerSakaFunction --schedule="0 12 * * *" --uri="$TRIGGER_URL" --oidc-service-account-email="$CF_SERVICE_ACCOUNT"
+# Create the Cloud Scheduler entry to be able to trigger the PubSub function.
+gcloud scheduler jobs create pubsub triggerSakaFunction --schedule="0 12 * * *" --topic="$PUBSUB_TOPIC" --location="$LOCATION" --message-body="Triggering the SAKA Cloud Function"
 
 print_green "Installation and setup of SAKA finished. Please deploy via Cloud Build by pushing the code to your source repository at ${HYPERLINK}https://source.cloud.google.com/$GCP_PROJECT_ID/$SOURCE_REPO\ahttps://source.cloud.google.com/$GCP_PROJECT_ID/$SOURCE_REPO${HYPERLINK}\a"

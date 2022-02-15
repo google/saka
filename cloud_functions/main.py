@@ -1,9 +1,9 @@
 """Cloud Function to add Google Ads search terms as keywords via SA360."""
 import json
 import os
-from typing import Dict
+from typing import Any, Dict
 
-import flask
+from google.cloud import functions
 from google.cloud import secretmanager
 from lib import google_ads_client as google_ads_client_lib
 from lib import sa360_client as sa360_client_lib
@@ -54,20 +54,32 @@ _OPTIONAL_SETTINGS = [
 ]
 
 
-def extract_and_upload_keywords(request: flask.Request) -> str:
+def extract_and_upload_keywords(event: Dict[Any, Any],
+                                context: functions.Context) -> str:
   """Cloud Function ("CF") triggered by Cloud Scheduler.
 
      This function orchestrates an ETL pipeline to read search terms from
      Google Ads API and upload them as Ad Group keywords to SA360 via Bulksheet.
 
   Args:
-      request: The request sent to the Cloud Function. Required for Google Cloud
-        Functions. (Unused)
+    event (dict): The dictionary with data specific to this type of event. The
+      `@type` field maps to
+      `type.googleapis.com/google.pubsub.v1.PubsubMessage`. The `data` field
+      maps to the PubsubMessage data in a base64-encoded string. The
+      `attributes` field maps to the PubsubMessage attributes if any is present.
+    context (google.cloud.functions.Context): Metadata of triggering event
+      including `event_id` which maps to the PubsubMessage messageId,
+      `timestamp` which maps to the PubsubMessage publishTime, `event_type`
+      which maps to `google.pubsub.topic.publish`, and `resource` which is a
+      dictionary that describes the service API endpoint pubsub.googleapis.com,
+      the triggering topic's name, and the triggering event type
+      `type.googleapis.com/google.pubsub.v1.PubsubMessage`.
 
   Returns:
       The response string. Required for Google Cloud Functions.
   """
-  del request
+  del event
+  del context
 
   settings = _load_settings()
   _sanitize_settings(settings)
@@ -99,10 +111,8 @@ def extract_and_upload_keywords(request: flask.Request) -> str:
 
   # Filters search terms for uploading to SA 360.
   search_term_transformer = search_term_transformer_lib.SearchTermTransformer(
-      settings[_CLICKS_THRESHOLD],
-      settings[_CONVERSIONS_THRESHOLD],
-      settings[_SEARCH_TERMS_TOKENS_THRESHOLD],
-      settings[_SA360_ACCOUNT_NAME],
+      settings[_CLICKS_THRESHOLD], settings[_CONVERSIONS_THRESHOLD],
+      settings[_SEARCH_TERMS_TOKENS_THRESHOLD], settings[_SA360_ACCOUNT_NAME],
       settings[_SA360_LABEL])
 
   sa360_bulksheet_df = search_term_transformer.transform_search_terms_to_keywords(
@@ -177,9 +187,8 @@ def _sanitize_settings(settings: Dict[str, str]) -> None:
     try:
       numeric_setting_value = float(settings[required_numeric_setting])
     except ValueError as value_error:
-      raise ValueError(
-          f'Environment variable could not be converted to float: '
-          f'"{required_numeric_setting}"') from value_error
+      raise ValueError(f'Environment variable could not be converted to float: '
+                       f'"{required_numeric_setting}"') from value_error
 
     settings[required_numeric_setting] = numeric_setting_value
 

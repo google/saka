@@ -2,8 +2,9 @@
 
 GCP_PROJECT_ID="" #[GCP Project ID]
 SOURCE_REPO="" #[Name of the Git Cloud Source Repository to create]
-LOCATION="us-central1"
+LOCATION="us-central1" #[Location of GCP resources that will be installed]
 CUSTOMER_ID="" #[Customer ID]
+PUBSUB_TOPIC="trigger-extract-and-upload-keywords-cloud-function" #[Cloud Pub/Sub topic that triggers the Cloud Function]
 
 GADS_CLIENT_ID="" #[Google Ads Client ID]
 GADS_DEVELOPER_TOKEN="" #[Google Ads Developer Token]
