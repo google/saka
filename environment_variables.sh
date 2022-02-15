@@ -14,7 +14,7 @@ SA360_SFTP_HOSTNAME="" #[SA360 SFTP Hostname]
 SA360_SFTP_PORT="" #[SA360 SFTP Port]
 SA360_SFTP_USERNAME="" #[SA360 SFTP Username]
 SA360_SFTP_PASSWORD="" #[SA360 SFTP Password]
-SA_ACCOUNT_TYPE="" #[SA360 Account Type]
+SA_ACCOUNT_NAME="" #[SA360 Account Name]
 SA_LABEL="" #[SA360 Keyword Label]
 
 CAMPAIGN_IDS="" #[List of Campaign IDs to run Google Ads Report for]

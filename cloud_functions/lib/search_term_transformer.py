@@ -27,7 +27,7 @@ class SearchTermTransformer():
   """Class with logic for deciding keyword types of gAds search queries."""
 
   def __init__(self, clicks_threshold: int, conversions_threshold: int,
-               search_term_tokens_threshold: int, sa_account_type: str,
+               search_term_tokens_threshold: int, sa_account_name: str,
                sa_label: str) -> None:
     """Initializes the SearchTermTransformer.
 
@@ -38,13 +38,13 @@ class SearchTermTransformer():
         whether to skip checking CTR and clicks or not.
       search_term_tokens_threshold: The number of tokens in the search term that
         determines if the it should be included in the SA360 bulksheet or not.
-      sa_account_type: The type of account for the keyword, e.g. "Google".
+      sa_account_name: The name of account for the keywords, e.g. "Google".
       sa_label: The label to add to this keyword entry, e.g. "SA_add".
     """
     self._clicks_threshold = clicks_threshold
     self._conversions_threshold = conversions_threshold
     self._search_term_tokens_threshold = search_term_tokens_threshold
-    self._sa_account_type = sa_account_type
+    self._sa_account_name = sa_account_name
     self._sa_label = sa_label
 
     print('Initialized Search Term Transformer class.')
@@ -78,7 +78,7 @@ class SearchTermTransformer():
         rows.append({
             'Row type': 'keyword',
             'Action': 'create',
-            'Account': self._sa_account_type,
+            'Account': self._sa_account_name,
             'Campaign': search_term_row['campaign_name'],
             'Ad group': search_term_row['ad_group_name'],
             'Keyword': search_term_row['search_term'],

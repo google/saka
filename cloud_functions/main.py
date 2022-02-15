@@ -12,7 +12,7 @@ from lib import search_term_transformer as search_term_transformer_lib
 _DEFAULT_CLICKS_THRESHOLD = 5
 _DEFAULT_CONVERSIONS_THRESHOLD = 0
 _DEFAULT_SEARCH_TERM_TOKENS_THRESHOLD = 3
-_DEFAULT_SA360_ACCOUNT_TYPE = 'Google'
+_DEFAULT_SA360_ACCOUNT_NAME = 'Google'
 _DEFAULT_SA360_LABEL = 'SA_add'
 
 _SA360_SFTP_HOSTNAME = 'partnerupload.google.com'
@@ -26,7 +26,7 @@ _SA360_SFTP_PASSWORD = 'sa360_sftp_password'
 _GPC_PROJECT_ID = 'GCP_PROJECT_ID'
 _CUSTOMER_ID = 'CUSTOMER_ID'
 _SA360_SFTP_USERNAME = 'SA360_SFTP_USERNAME'
-_SA360_ACCOUNT_TYPE = 'SA360_ACCOUNT_TYPE'
+_SA360_ACCOUNT_NAME = 'SA360_ACCOUNT_NAME'
 _SA360_LABEL = 'SA360_LABEL'
 
 _CLICKS_THRESHOLD = 'CLICKS_THRESHOLD'
@@ -39,7 +39,7 @@ _REQUIRED_STR_SETTINGS = {
     _GPC_PROJECT_ID: '',
     _CUSTOMER_ID: '',
     _SA360_SFTP_USERNAME: '',
-    _SA360_ACCOUNT_TYPE: _DEFAULT_SA360_ACCOUNT_TYPE,
+    _SA360_ACCOUNT_NAME: _DEFAULT_SA360_ACCOUNT_NAME,
     _SA360_LABEL: _DEFAULT_SA360_LABEL,
 }
 
@@ -102,7 +102,7 @@ def extract_and_upload_keywords(request: flask.Request) -> str:
       settings[_CLICKS_THRESHOLD],
       settings[_CONVERSIONS_THRESHOLD],
       settings[_SEARCH_TERMS_TOKENS_THRESHOLD],
-      settings[_SA360_ACCOUNT_TYPE],
+      settings[_SA360_ACCOUNT_NAME],
       settings[_SA360_LABEL])
 
   sa360_bulksheet_df = search_term_transformer.transform_search_terms_to_keywords(
