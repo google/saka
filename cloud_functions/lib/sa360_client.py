@@ -44,7 +44,7 @@ class SA360Client():
         password=self._password)
     sftp_client = ssh_client.open_sftp()
     bulksheet_filename = (
-        f'saka_test_bulkfile_{datetime.date.today().strftime("%b_%d_%Y")}.csv')
+        f'saka_bulkfile_{datetime.date.today().strftime("%b_%d_%Y")}.csv')
     with sftp_client.open(bulksheet_filename, 'w') as bulksheet_file:
       print(f'Opened SFTP client for writing file {bulksheet_filename}.')
       sa360_bulksheet_df.to_csv(bulksheet_file, index=False)
