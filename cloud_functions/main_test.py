@@ -92,8 +92,8 @@ class MainTest(parameterized.TestCase):
                                        expected_response):
     """Tests extract_and_upload_keywords."""
     # Arrange
-    data = {'name': 'test'}
-    test_request = mock.Mock(get_json=mock.Mock(return_value=data), args=data)
+    test_event = None
+    test_context = None
 
     mock_retrieve_secret.return_value = '["Test Secret"]'
     mock_google_ads_client.return_value.get_search_terms.return_value = _TEST_SEARCH_TERM_DF
@@ -101,7 +101,7 @@ class MainTest(parameterized.TestCase):
     mock_search_term_transformer.return_value.transform_search_terms_to_keywords.return_value = transformed_df
 
     # Act
-    actual_response = main.extract_and_upload_keywords(test_request)
+    actual_response = main.extract_and_upload_keywords(test_event, test_context)
     actual_sa360_call_count = (
         mock_sa360_client.return_value.upload_keywords_to_sa360.call_count)
 
@@ -130,8 +130,8 @@ class MainTest(parameterized.TestCase):
       get_secret_call_results):
     """Tests error raised when secrets are not set."""
     # Arrange
-    data = {'name': 'test'}
-    test_request = mock.Mock(get_json=mock.Mock(return_value=data), args=data)
+    test_event = None
+    test_context = None
 
     mock_google_ads_client.return_value.get_search_terms.return_value = _TEST_SEARCH_TERM_DF
     mock_google_ads_client.return_value.get_ad_groups.return_value = _TEST_AD_GROUP_DF
@@ -141,7 +141,7 @@ class MainTest(parameterized.TestCase):
 
     # Act / Assert
     with self.assertRaises(ValueError):
-      main.extract_and_upload_keywords(test_request)
+      main.extract_and_upload_keywords(test_event, test_context)
 
   @parameterized.named_parameters([
       {
@@ -195,11 +195,11 @@ class MainTest(parameterized.TestCase):
                                                         value):
     """Tests invalid environment variables / settings are handled correctly."""
     # Arrange
-    data = {'name': 'test'}
-    test_request = mock.Mock(get_json=mock.Mock(return_value=data), args=data)
+    test_event = None
+    test_context = None
 
     os.environ[env_var] = value
 
     # Act / Assert
     with self.assertRaises(ValueError):
-      main.extract_and_upload_keywords(test_request)
+      main.extract_and_upload_keywords(test_event, test_context)

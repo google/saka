@@ -2,7 +2,6 @@ absl-py
 google-api-python-client
 google-auth
 google-ads
-google-cloud-functions
 google-cloud-secret-manager
 pandas
 parameterized
