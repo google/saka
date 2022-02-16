@@ -11,7 +11,7 @@ steps:
         && pip install -r cloud_functions/requirements.txt \
         && python test_runner.py
   - name: 'gcr.io/cloud-builders/gcloud'
-    args: ['functions', 'deploy', 'extract_and_upload_keywords', '--memory', '512MB', '--timeout', '540s', '--set-env-vars', 'GCP_PROJECT_ID=${_GCP_PROJECT_ID},CUSTOMER_ID=${_CUSTOMER_ID},SA360_SFTP_USERNAME=${_SA360_SFTP_USERNAME},SA360_ACCOUNT_NAME=${_SA360_ACCOUNT_NAME},SA360_LABEL=${_SA360_LABEL},CAMPAIGN_IDS=${_CAMPAIGN_IDS},CLICKS_THRESHOLD=${_CLICKS_THRESHOLD},CONVERSIONS_THRESHOLD=${_CONVERSIONS_THRESHOLD},SEARCH_TERM_TOKENS_THRESHOLD=${_SEARCH_TERM_TOKENS_THRESHOLD}', 'trigger-topic', '${_PUBSUB_TOPIC}', '--runtime', 'python39']
+    args: ['functions', 'deploy', 'extract_and_upload_keywords', '--memory', '512MB', '--timeout', '540s', '--set-env-vars', 'GCP_PROJECT_ID=${_GCP_PROJECT_ID},CUSTOMER_ID=${_CUSTOMER_ID},SA360_SFTP_USERNAME=${_SA360_SFTP_USERNAME},SA360_ACCOUNT_NAME=${_SA360_ACCOUNT_NAME},SA360_LABEL=${_SA360_LABEL},CAMPAIGN_IDS=${_CAMPAIGN_IDS},CLICKS_THRESHOLD=${_CLICKS_THRESHOLD},CONVERSIONS_THRESHOLD=${_CONVERSIONS_THRESHOLD},SEARCH_TERM_TOKENS_THRESHOLD=${_SEARCH_TERM_TOKENS_THRESHOLD}', '--trigger-topic', '${_PUBSUB_TOPIC}', '--runtime', 'python39']
     dir: cloud_functions
     waitFor:
       - "SakaUnitTests"
