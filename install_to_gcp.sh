@@ -135,6 +135,6 @@ CreateTrigger deploy_saka_cf_to_gcp.yaml \
 
 
 # Create the Cloud Scheduler entry to be able to trigger the PubSub function.
-gcloud scheduler jobs create pubsub triggerSakaFunction --schedule="0 12 * * *" --topic="$PUBSUB_TOPIC" --location="$LOCATION" --message-body="Triggering the SAKA Cloud Function"
+gcloud scheduler jobs create pubsub triggerSakaFunction --schedule="0 12 * * *" --topic="$PUBSUB_TOPIC" --location="$LOCATION" --message-body="Triggering the SAKA Cloud Function" --time-zone="Japan"
 
 print_green "Installation and setup of SAKA finished. Please deploy via Cloud Build by pushing the code to your source repository at ${HYPERLINK}https://source.cloud.google.com/$GCP_PROJECT_ID/$SOURCE_REPO\ahttps://source.cloud.google.com/$GCP_PROJECT_ID/$SOURCE_REPO${HYPERLINK}\a"
