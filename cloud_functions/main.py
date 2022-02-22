@@ -12,64 +12,43 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Cloud Function to add Google Ads search terms as keywords via SA360."""
 import json
 import os
-from typing import Any, Dict
+from typing import Any, Dict, List
+
+import constants
 
 from google.cloud import secretmanager
+
 from lib import google_ads_client as google_ads_client_lib
 from lib import sa360_client as sa360_client_lib
 from lib import search_term_transformer as search_term_transformer_lib
 
-_DEFAULT_CLICKS_THRESHOLD = 5
-_DEFAULT_CONVERSIONS_THRESHOLD = 0
-_DEFAULT_SEARCH_TERM_TOKENS_THRESHOLD = 3
-_DEFAULT_SA360_ACCOUNT_NAME = 'Google'
-_DEFAULT_SA360_LABEL = 'SA_add'
-
-_SA360_SFTP_HOSTNAME = 'partnerupload.google.com'
-_SA360_SFTP_PORT = 19321
-
-# Secrets
-_GOOGLE_ADS_API_CREDENTIALS = 'google_ads_api_credentials'
-_SA360_SFTP_PASSWORD = 'sa360_sftp_password'
-
-# Environment variables
-_GPC_PROJECT_ID = 'GCP_PROJECT_ID'
-_CUSTOMER_ID = 'CUSTOMER_ID'
-_SA360_SFTP_USERNAME = 'SA360_SFTP_USERNAME'
-_SA360_ACCOUNT_NAME = 'SA360_ACCOUNT_NAME'
-_SA360_LABEL = 'SA360_LABEL'
-
-_CLICKS_THRESHOLD = 'CLICKS_THRESHOLD'
-_CONVERSIONS_THRESHOLD = 'CONVERSIONS_THRESHOLD'
-_SEARCH_TERMS_TOKENS_THRESHOLD = 'SEARCH_TERMS_TOKENS_THRESHOLD'
-
-_CAMPAIGN_IDS = 'CAMPAIGN_IDS'
-
-_REQUIRED_STR_SETTINGS = {
-    _GPC_PROJECT_ID: '',
-    _CUSTOMER_ID: '',
-    _SA360_SFTP_USERNAME: '',
-    _SA360_ACCOUNT_NAME: _DEFAULT_SA360_ACCOUNT_NAME,
-    _SA360_LABEL: _DEFAULT_SA360_LABEL,
+_REQUIRED_STR_SETTINGS: Dict[str, str] = {
+    constants.GCP_PROJECT_ID: '',
+    constants.CUSTOMER_ID: '',
+    constants.SA360_SFTP_USERNAME: '',
+    constants.SA360_ACCOUNT_NAME: constants.DEFAULT_SA360_ACCOUNT_NAME,
+    constants.SA360_LABEL: constants.DEFAULT_SA360_LABEL,
 }
 
-_REQUIRED_NUMERIC_SETTINGS = {
-    _CLICKS_THRESHOLD: _DEFAULT_CLICKS_THRESHOLD,
-    _CONVERSIONS_THRESHOLD: _DEFAULT_CONVERSIONS_THRESHOLD,
-    _SEARCH_TERMS_TOKENS_THRESHOLD: _DEFAULT_SEARCH_TERM_TOKENS_THRESHOLD,
+_REQUIRED_NUMERIC_SETTINGS: Dict[str, Any] = {
+    constants.CLICKS_THRESHOLD:
+        constants.DEFAULT_CLICKS_THRESHOLD,
+    constants.CONVERSIONS_THRESHOLD:
+        constants.DEFAULT_CONVERSIONS_THRESHOLD,
+    constants.SEARCH_TERMS_TOKENS_THRESHOLD:
+        constants.DEFAULT_SEARCH_TERM_TOKENS_THRESHOLD,
 }
 
-_OPTIONAL_SETTINGS = [
-    _CAMPAIGN_IDS,
+_OPTIONAL_SETTINGS: List[str] = [
+    constants.CAMPAIGN_IDS,
 ]
 
 
-def extract_and_upload_keywords(event: Dict[Any, Any],
-                                context: 'google.cloud.functions.Context') -> str:
+def extract_and_upload_keywords(
+    event: Dict[Any, Any], context: 'google.cloud.functions.Context') -> str:
   """Cloud Function ("CF") triggered by Cloud Scheduler.
 
      This function orchestrates an ETL pipeline to read search terms from
@@ -99,35 +78,36 @@ def extract_and_upload_keywords(event: Dict[Any, Any],
   _sanitize_settings(settings)
 
   # Fetches search terms from Google Ads API.
-  google_ads_api_credentials = _retrieve_secret(settings[_GPC_PROJECT_ID],
-                                                _GOOGLE_ADS_API_CREDENTIALS)
+  google_ads_api_credentials = _retrieve_secret(
+      settings[constants.GCP_PROJECT_ID], constants.GOOGLE_ADS_API_CREDENTIALS)
 
   if not google_ads_api_credentials:
     raise ValueError(f'Secret not found in Secret Manager. '
-                     f'Project: "{settings[_GPC_PROJECT_ID]}",'
-                     f'Secret Name: "{_GOOGLE_ADS_API_CREDENTIALS}".')
+                     f'Project: "{settings[constants.GCP_PROJECT_ID]}",'
+                     f'Secret Name: "{constants.GOOGLE_ADS_API_CREDENTIALS}".')
 
   google_ads_api_credentials = json.loads(google_ads_api_credentials)
 
   google_ads_client = google_ads_client_lib.GoogleAdsClient(
       google_ads_api_credentials)
 
-  search_terms_df = google_ads_client.get_search_terms(settings[_CUSTOMER_ID],
-                                                       settings[_CAMPAIGN_IDS])
+  search_terms_df = google_ads_client.get_search_terms(
+      settings[constants.CUSTOMER_ID], settings[constants.CAMPAIGN_IDS])
 
   print(f'Fetched {len(search_terms_df)} search term row(s) from Google Ads.')
 
   # Fetches Ad Group stats from Google Ads API.
-  ad_groups_df = google_ads_client.get_ad_groups(settings[_CUSTOMER_ID],
-                                                 settings[_CAMPAIGN_IDS])
+  ad_groups_df = google_ads_client.get_ad_groups(
+      settings[constants.CUSTOMER_ID], settings[constants.CAMPAIGN_IDS])
 
   print(f'Fetched {len(ad_groups_df)} Ad Group row(s) from Google Ads.')
 
   # Filters search terms for uploading to SA 360.
   search_term_transformer = search_term_transformer_lib.SearchTermTransformer(
-      settings[_CLICKS_THRESHOLD], settings[_CONVERSIONS_THRESHOLD],
-      settings[_SEARCH_TERMS_TOKENS_THRESHOLD], settings[_SA360_ACCOUNT_NAME],
-      settings[_SA360_LABEL])
+      settings[constants.CLICKS_THRESHOLD],
+      settings[constants.CONVERSIONS_THRESHOLD],
+      settings[constants.SEARCH_TERMS_TOKENS_THRESHOLD],
+      settings[constants.SA360_ACCOUNT_NAME], settings[constants.SA360_LABEL])
 
   sa360_bulksheet_df = search_term_transformer.transform_search_terms_to_keywords(
       search_terms_df, ad_groups_df)
@@ -139,18 +119,17 @@ def extract_and_upload_keywords(event: Dict[Any, Any],
   print(f'Found {len(sa360_bulksheet_df)} row(s) to upload to SA 360.')
 
   # Uploads data to SA 360 via Bulksheet.
-  sa_360_sftp_password = _retrieve_secret(settings[_GPC_PROJECT_ID],
-                                          _SA360_SFTP_PASSWORD)
+  sa_360_sftp_password = _retrieve_secret(settings[constants.GCP_PROJECT_ID],
+                                          constants.SA360_SFTP_PASSWORD)
 
   if not sa_360_sftp_password:
     raise ValueError(f'Secret not found in Secret Manager. '
-                     f'Project: "{settings[_GPC_PROJECT_ID]}",'
-                     f'Secret Name: "{_SA360_SFTP_PASSWORD}".')
+                     f'Project: "{settings[constants.GCP_PROJECT_ID]}",'
+                     f'Secret Name: "{constants.SA360_SFTP_PASSWORD}".')
 
-  sa360_client = sa360_client_lib.SA360Client(_SA360_SFTP_HOSTNAME,
-                                              _SA360_SFTP_PORT,
-                                              settings[_SA360_SFTP_USERNAME],
-                                              sa_360_sftp_password)
+  sa360_client = sa360_client_lib.SA360Client(
+      constants.SA360_SFTP_HOSTNAME, constants.SA360_SFTP_PORT,
+      settings[constants.SA360_SFTP_USERNAME], sa_360_sftp_password)
 
   sa360_client.upload_keywords_to_sa360(sa360_bulksheet_df)
 
@@ -207,11 +186,11 @@ def _sanitize_settings(settings: Dict[str, str]) -> None:
     settings[required_numeric_setting] = numeric_setting_value
 
   # Sanitizes campaign ids.
-  campaign_ids = settings[_CAMPAIGN_IDS].strip()
+  campaign_ids = settings[constants.CAMPAIGN_IDS].strip()
 
   # Strips trailing comma.
   if campaign_ids and campaign_ids[-1] == ',':
-    settings[_CAMPAIGN_IDS] = campaign_ids[:-1]
+    settings[constants.CAMPAIGN_IDS] = campaign_ids[:-1]
 
 
 def _retrieve_secret(gcp_project_id: str, secret_name: str) -> str:

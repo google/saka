@@ -20,22 +20,9 @@ See class docstring for more details.
 
 from typing import Tuple
 
+import constants
+
 import pandas as pd
-
-_MATCH_TYPE_BROAD = 'broad'
-_MATCH_TYPE_EXACT = 'exact'
-_MATCH_TYPE_PHRASE = 'phrase'
-
-_SA_360_BULKSHEET_COLUMNS = [
-    'Row type',
-    'Action',
-    'Account',
-    'Campaign',
-    'Ad group',
-    'Keyword',
-    'Keyword match type',
-    'Label',
-]
 
 
 class SearchTermTransformer():
@@ -101,7 +88,7 @@ class SearchTermTransformer():
             'Label': self._sa_label
         })
 
-    return pd.DataFrame(rows, columns=_SA_360_BULKSHEET_COLUMNS)
+    return pd.DataFrame(rows, columns=constants.SA_360_BULKSHEET_COLUMNS)
 
   def _get_match_type(self,
                       search_term_row: pd.Series,
@@ -136,9 +123,9 @@ class SearchTermTransformer():
         search_term_row['clicks'] > self._clicks_threshold):
       search_term_tokens = search_term_row['search_term'].split()
       if len(search_term_tokens) > self._search_term_tokens_threshold:
-        return _MATCH_TYPE_BROAD, ''
+        return constants.MATCH_TYPE_BROAD, ''
       else:
-        return _MATCH_TYPE_EXACT, _MATCH_TYPE_PHRASE
+        return constants.MATCH_TYPE_EXACT, constants.MATCH_TYPE_PHRASE
 
     # Empty string tuple indicates that the keyword should not be added.
     return '', ''
