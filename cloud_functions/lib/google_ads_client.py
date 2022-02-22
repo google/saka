@@ -179,6 +179,57 @@ class GoogleAdsClient():
 
     return pd.DataFrame(results, columns=constants.AD_GROUP_COLUMNS)
 
+  def get_keywords(self,
+                   customer_id: str,
+                   campaign_ids: str = None) -> pd.DataFrame:
+    """Returns ad group keywords in a Pandas DataFrame.
+
+    Args:
+      customer_id: A 10-digit string representation of a Google Ads customer ID.
+      campaign_ids: A comma-separated string of campaign_ids to query when
+        retrieving ad groups. If empty, all campaigns will be queried.
+
+    Returns:
+      An ad group keywords in a Pandas DataFrame with the following columns:
+      ad_group_name, keyword, match_type.
+
+    Raises:
+      SAGoogleAdsClientError: if args are incorrect or an error is encountered
+        while processing the request.
+    """
+    self._validate_customer_id(customer_id)
+
+    search_request = self._build_search_request(constants.KEYWORDS_QUERY,
+                                                customer_id, campaign_ids)
+
+    try:
+      stream = self._gads_service.search_stream(search_request)
+
+      results = []
+
+      for batch in stream:
+        for row in batch.results:
+          result = {
+              'ad_group_name': row.ad_group.name,
+              'keyword': row.ad_group_criterion.keyword.text,
+              'match_type': row.ad_group_criterion.keyword.match_type,
+          }
+          results.append(result)
+    except google_ads_errors.GoogleAdsException as google_ads_exception:
+      logging.error(
+          RuntimeError(
+              f'Error: Customer: {customer_id}, campaigns: {campaign_ids}. '
+              'Failed to get ad group keywords. '
+              f'Error: {google_ads_exception}'))
+      raise SAGoogleAdsClientError(
+          f'Error: Customer: {customer_id}, campaigns: {campaign_ids}. '
+          f'Failed to get ad group keywords. Error: {google_ads_exception}'
+      ) from google_ads_exception
+
+    print('Successfully fetched ad group keywords.')
+
+    return pd.DataFrame(results, columns=constants.KEYWORD_COLUMNS)
+
   def _validate_customer_id(self, customer_id: str) -> None:
     """Raises an exception if the customer id is not valid.
 

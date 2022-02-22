@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import constants
 import unittest
 from unittest import mock
 
@@ -70,6 +71,20 @@ _FAKE_AD_GROUP_STREAM = [
     ])
 ]
 
+# A fake stream of ad group keyword rows.
+_FAKE_KEYWORD_STREAM = [
+    fakes.FakeStream([
+        fakes.FakeStreamRow(
+            ad_group_name='ad group 1',
+            keyword_text='keyword 1',
+            match_type='broad'),
+        fakes.FakeStreamRow(
+            ad_group_name='ad group 2',
+            keyword_text='keyword 1',
+            match_type='exact'),
+    ])
+]
+
 
 def _build_expected_search_terms_df() -> pd.DataFrame:
   """Builds the expected search terms DataFrame based on _FAKE_STREAM.
@@ -120,6 +135,28 @@ def _build_expected_ad_group_df() -> pd.DataFrame:
     row = {
         'ad_group_name': fake_stream_row.ad_group.name,
         'ctr': fake_stream_row.metrics.ctr,
+    }
+
+    rows.append(row)
+
+  return pd.DataFrame(rows, columns=expected_cols)
+
+
+def _build_expected_keywords_df() -> pd.DataFrame:
+  """Builds the expected keywords DataFrame based on _FAKE_STREAM.
+
+  Returns:
+    A DataFrame built using the rows in the _FAKE_STREAM.
+  """
+  expected_cols = constants.KEYWORD_COLUMNS
+
+  rows = []
+
+  for fake_stream_row in _FAKE_KEYWORD_STREAM[0].results:
+    row = {
+        'ad_group_name': fake_stream_row.ad_group.name,
+        'keyword': fake_stream_row.ad_group_criterion.keyword.text,
+        'match_type': fake_stream_row.ad_group_criterion.keyword.match_type
     }
 
     rows.append(row)
@@ -294,6 +331,79 @@ class GoogleAdsTest(unittest.TestCase):
       # Act / Assert
       with self.assertRaises(google_ads_client_lib.SAGoogleAdsClientError):
         google_ads_client.get_ad_groups(customer_id='0123456789')
+
+  def test_get_keywords(self):
+    """Tests that get_keywords returns the expected DataFrame."""
+
+    # Arrange
+    # The API client is used to get the API service, and the API service
+    # is used to return a stream of results. To mock this, we do the following:
+
+    # 1. Set up a mock client
+    mock_client = mock.MagicMock()
+
+    # 2. Set up a mock service
+    mock_service = mock.MagicMock()
+
+    # 3. Set the mock service to return a fake stream of ad group data
+    mock_service.search_stream.return_value = _FAKE_KEYWORD_STREAM
+
+    # 4. Set up the mock client to return the mock service
+    mock_client.get_service.return_value = mock_service
+
+    with mock.patch('google.ads.googleads.client.GoogleAdsClient.load_from_dict'
+                   ) as mock_ads_client:
+      mock_ads_client.return_value = mock_client
+      expected_df = _build_expected_keywords_df()
+      google_ads_client = google_ads_client_lib.GoogleAdsClient({})
+
+      # Act
+      actual_df = google_ads_client.get_keywords(customer_id='0123456789')
+
+      # Assert
+      pd.testing.assert_frame_equal(expected_df, actual_df)
+
+  @parameterized.expand([
+      ('12345'),  # Too short
+      ('12345678910'),  # Too long
+      ('abc1234567'),  # Non-numeric
+  ])
+  def test_get_keywords_invalid_client_id_raises_error(self, customer_id):
+    """Tests invalid client ids raise the expected error."""
+    # Arrange
+    mock_client = mock.MagicMock()
+    mock_service = mock.MagicMock()
+    mock_client.get_service.return_value = mock_service
+
+    with mock.patch('google.ads.googleads.client.GoogleAdsClient.load_from_dict'
+                   ) as mock_ads_client:
+      mock_ads_client.return_value = mock_client
+      google_ads_client = google_ads_client_lib.GoogleAdsClient({})
+
+      # Act / Assert
+      with self.assertRaises(google_ads_client_lib.SAGoogleAdsClientError):
+        google_ads_client.get_keywords(customer_id=customer_id)
+
+  def test_get_keywords_service_error_raises_error(self):
+    """Tests error while using the API service raises the expected error."""
+    # Arrange
+    mock_client = mock.MagicMock()
+    mock_service = mock.MagicMock()
+    mock_service.search_stream.side_effect = google_ads_errors.GoogleAdsException(
+        error=RuntimeError('API Unavailable'),
+        call=None,
+        failure=None,
+        request_id='')
+    mock_client.get_service.return_value = mock_service
+
+    with mock.patch('google.ads.googleads.client.GoogleAdsClient.load_from_dict'
+                   ) as mock_ads_client:
+      mock_ads_client.return_value = mock_client
+      google_ads_client = google_ads_client_lib.GoogleAdsClient({})
+
+      # Act / Assert
+      with self.assertRaises(google_ads_client_lib.SAGoogleAdsClientError):
+        google_ads_client.get_keywords(customer_id='0123456789')
 
 
 if __name__ == '__main__':

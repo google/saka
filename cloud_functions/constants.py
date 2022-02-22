@@ -36,6 +36,7 @@ SEARCH_REPORT_COLUMNS = [
     'campaign_id', 'campaign_name', 'ctr', 'keyword_text'
 ]
 AD_GROUP_COLUMNS = ['ad_group_name', 'ctr']
+KEYWORD_COLUMNS = ['ad_group_name', 'keyword', 'match_type']
 
 SEARCH_REPORT_QUERY = f"""
   SELECT
@@ -67,7 +68,7 @@ AD_GROUP_QUERY = f"""
 
 KEYWORDS_QUERY = """
   SELECT
-    ad_group.name
+    ad_group.name,
     ad_group_criterion.keyword.text,
     ad_group_criterion.keyword.match_type
   FROM

@@ -34,13 +34,15 @@ class FakeStreamRow:
                ad_group_name: str = '',
                campaign_id: str = '',
                campaign_name: str = '',
-               keyword_text: str = '') -> None:
+               keyword_text: str = '',
+               match_type: str = '') -> None:
     """Initializes the FakeStreamRow."""
     self.search_term_view = mock.MagicMock()
     self.metrics = mock.MagicMock()
     self.ad_group = mock.MagicMock()
     self.campaign = mock.MagicMock()
     self.segments = mock.MagicMock()
+    self.ad_group_criterion = mock.MagicMock()
 
     self.search_term_view.search_term = search_term
     self.search_term_view.status = status
@@ -55,6 +57,9 @@ class FakeStreamRow:
     self.campaign.name = campaign_name
 
     self.segments.keyword.info.text = keyword_text
+
+    self.ad_group_criterion.keyword.text = keyword_text
+    self.ad_group_criterion.keyword.match_type = match_type
 
 
 class FakeStream:
