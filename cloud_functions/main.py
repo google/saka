@@ -114,7 +114,10 @@ def extract_and_upload_keywords(
 
   if sa360_bulksheet_df.empty:
     # No keywords found after filtering: exits the function.
-    return 'Finished: No keywords found to upload to SA 360.'
+    no_keywords_found_message = (
+        'Finished: No keywords found to upload to SA 360.')
+    print(no_keywords_found_message)
+    return no_keywords_found_message
 
   print(f'Found {len(sa360_bulksheet_df)} row(s) to upload to SA 360.')
 
@@ -133,7 +136,9 @@ def extract_and_upload_keywords(
 
   sa360_client.upload_keywords_to_sa360(sa360_bulksheet_df)
 
-  return f'Success: Uploaded bulksheet with {len(sa360_bulksheet_df)} row(s).'
+  success_message = f'Success: Uploaded bulksheet with {len(sa360_bulksheet_df)} row(s).'
+  print(success_message)
+  return success_message
 
 
 def _load_settings() -> Dict[str, str]:
