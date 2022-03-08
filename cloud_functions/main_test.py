@@ -12,23 +12,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Unit tests for the SAKA ETL main Cloud Function."""
 import os
 import unittest.mock as mock
 
 from absl.testing import parameterized
+import constants
 import main
 import pandas as pd
 
 _TEST_GCP_PROJECT_ID = 'test-gcp-project-id'
 _TEST_CUSTOMER_ID = '12345'
 _TEST_CAMPAIGN_IDS = '123,456'
-_TEST_CLICKS_THRESHOLD = '1'
-_TEST_CONVERSIONS_THRESHOLD = '1'
-_SEARCH_TERM_TOKENS_THRESHOLD = '3'
-_TEST_SA360_ACCOUNT_NAME = 'Google'
-_TEST_SA360_LABEL = 'SA_add'
 _TEST_SA360_SFTP_USERNAME = 'Test Username'
 
 _TEST_SEARCH_TERM_DF = pd.DataFrame([{
@@ -41,13 +36,19 @@ _TEST_SEARCH_TERM_DF = pd.DataFrame([{
     'campaign_name': 'Fake campaign',
     'ctr': 0.5,
     'keyword_text': 'Fake keyword'
-}], columns=['search_term', 'status', 'conversions', 'clicks', 'ad_group_name',
-             'campaign_id', 'campaign_name', 'ctr', 'keyword_text'])
+}],
+                                    columns=[
+                                        'search_term', 'status', 'conversions',
+                                        'clicks', 'ad_group_name',
+                                        'campaign_id', 'campaign_name', 'ctr',
+                                        'keyword_text'
+                                    ])
 
 _TEST_AD_GROUP_DF = pd.DataFrame([{
     'ad_group_name': 'Fake ad group',
     'ctr': 0.3
-}], columns=['ad_group_name', 'ctr'])
+}],
+                                 columns=['ad_group_name', 'ctr'])
 
 _TEST_TRANSFORMED_DF = pd.DataFrame([{
     'Row Type': 'keyword',
@@ -58,21 +59,34 @@ _TEST_TRANSFORMED_DF = pd.DataFrame([{
     'Keyword': 'Fake keyword',
     'Keyword match type': 'BROAD',
     'Label': 'SA_add'
-}], columns=['Row Type', 'Action', 'Account', 'Campaign', 'Ad Group', 'Keyword',
-             'Keyword match type', 'Label'])
+}],
+                                    columns=[
+                                        'Row Type', 'Action', 'Account',
+                                        'Campaign', 'Ad Group', 'Keyword',
+                                        'Keyword match type', 'Label'
+                                    ])
 
 
 @mock.patch.dict(
     os.environ, {
-        'GCP_PROJECT_ID': _TEST_GCP_PROJECT_ID,
-        'CUSTOMER_ID': _TEST_CUSTOMER_ID,
-        'CAMPAIGN_IDS': _TEST_CAMPAIGN_IDS,
-        'CLICKS_THRESHOLD': _TEST_CLICKS_THRESHOLD,
-        'CONVERSIONS_THRESHOLD': _TEST_CONVERSIONS_THRESHOLD,
-        'SEARCH_TERM_TOKENS_THRESHOLD': _SEARCH_TERM_TOKENS_THRESHOLD,
-        'SA360_ACCOUNT_NAME': _TEST_SA360_ACCOUNT_NAME,
-        'SA360_LABEL': _TEST_SA360_LABEL,
-        'SA360_SFTP_USERNAME': _TEST_SA360_SFTP_USERNAME,
+        'GCP_PROJECT_ID':
+            _TEST_GCP_PROJECT_ID,
+        'CUSTOMER_ID':
+            _TEST_CUSTOMER_ID,
+        'CAMPAIGN_IDS':
+            _TEST_CAMPAIGN_IDS,
+        'CLICKS_THRESHOLD':
+            str(constants.DEFAULT_CLICKS_THRESHOLD),
+        'CONVERSIONS_THRESHOLD':
+            str(constants.DEFAULT_CONVERSIONS_THRESHOLD),
+        'SEARCH_TERM_TOKENS_THRESHOLD':
+            str(constants.DEFAULT_SEARCH_TERM_TOKENS_THRESHOLD),
+        'SA360_ACCOUNT_NAME':
+            constants.DEFAULT_SA360_ACCOUNT_NAME,
+        'SA360_LABEL':
+            constants.DEFAULT_SA360_LABEL,
+        'SA360_SFTP_USERNAME':
+            _TEST_SA360_SFTP_USERNAME,
     })
 class MainTest(parameterized.TestCase):
 
@@ -86,9 +100,12 @@ class MainTest(parameterized.TestCase):
               'row(s).'
       },
       {
-          'testcase_name': 'No rows found does not upload to SA360',
-          'transformed_df': pd.DataFrame(),
-          'expected_sa360_call_count': 0,
+          'testcase_name':
+              'No rows found does not upload to SA360',
+          'transformed_df':
+              pd.DataFrame(),
+          'expected_sa360_call_count':
+              0,
           'expected_response':
               'Finished: No keywords found to upload to SA 360.'
       },
@@ -97,12 +114,10 @@ class MainTest(parameterized.TestCase):
   @mock.patch('lib.search_term_transformer.SearchTermTransformer')
   @mock.patch('lib.sa360_client.SA360Client')
   @mock.patch('main._retrieve_secret')
-  def test_extract_and_upload_keywords(self,
-                                       mock_retrieve_secret,
+  def test_extract_and_upload_keywords(self, mock_retrieve_secret,
                                        mock_sa360_client,
                                        mock_search_term_transformer,
-                                       mock_google_ads_client,
-                                       transformed_df,
+                                       mock_google_ads_client, transformed_df,
                                        expected_sa360_call_count,
                                        expected_response):
     """Tests extract_and_upload_keywords."""
@@ -124,25 +139,19 @@ class MainTest(parameterized.TestCase):
     self.assertEqual(expected_sa360_call_count, actual_sa360_call_count)
     self.assertEqual(expected_response, actual_response)
 
-  @parameterized.named_parameters([
-      {
-          'testcase_name': 'Google Ads API Credentials Missing',
-          'get_secret_call_results': ['', 'Test SFTP password'],
-      },
-      {
-          'testcase_name': 'SA360 SFTP password Missing',
-          'get_secret_call_results': ['["Test Secret"]', ''],
-      }
-  ])
+  @parameterized.named_parameters([{
+      'testcase_name': 'Google Ads API Credentials Missing',
+      'get_secret_call_results': ['', 'Test SFTP password'],
+  }, {
+      'testcase_name': 'SA360 SFTP password Missing',
+      'get_secret_call_results': ['["Test Secret"]', ''],
+  }])
   @mock.patch('lib.google_ads_client.GoogleAdsClient')
   @mock.patch('lib.search_term_transformer.SearchTermTransformer')
   @mock.patch('main._retrieve_secret')
   def test_extract_and_upload_keywords_secrets_not_found(
-      self,
-      mock_retrieve_secret,
-      mock_search_term_transformer,
-      mock_google_ads_client,
-      get_secret_call_results):
+      self, mock_retrieve_secret, mock_search_term_transformer,
+      mock_google_ads_client, get_secret_call_results):
     """Tests error raised when secrets are not set."""
     # Arrange
     test_event = None
@@ -205,9 +214,7 @@ class MainTest(parameterized.TestCase):
           'value': 'five'
       },
   ])
-  def test_extract_and_upload_keywords_invalid_env_vars(self,
-                                                        env_var,
-                                                        value):
+  def test_extract_and_upload_keywords_invalid_env_vars(self, env_var, value):
     """Tests invalid environment variables / settings are handled correctly."""
     # Arrange
     test_event = None

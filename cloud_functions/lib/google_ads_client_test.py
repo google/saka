@@ -13,10 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import constants
 import unittest
 from unittest import mock
-
+import constants
 from google.ads.googleads import errors as google_ads_errors
 import google_ads_client as google_ads_client_lib
 import pandas as pd

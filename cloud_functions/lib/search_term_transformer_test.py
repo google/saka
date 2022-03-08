@@ -12,24 +12,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Unit tests for the Search Term Transformer Class."""
 
 from typing import List
 
 from absl.testing import parameterized
+import constants
 import pandas as pd
+
 import search_term_transformer as search_term_transformer_lib
-
-_DEFAULT_CLICKS_THRESHOLD = 5
-_DEFAULT_CONVERSIONS_THRESHOLD = 0
-_DEFAULT_SEARCH_TERM_TOKENS_THRESHOLD = 3
-_DEFAULT_SA_ACCOUNT_TYPE = 'Google'
-_DEFAULT_SA_LABEL = 'SA_add'
-
-_MATCH_TYPE_BROAD = 'broad'
-_MATCH_TYPE_EXACT = 'exact'
-_MATCH_TYPE_PHRASE = 'phrase'
 
 _TEST_SEARCH_REPORT_COLUMNS = [
     'search_term', 'status', 'conversions', 'clicks', 'ad_group_name',
@@ -49,13 +40,10 @@ _EXPECTED_SA_360_BULKSHEET_COLUMNS = [
     'Label',
 ]
 
-_TEST_AD_GROUP_DF = pd.DataFrame(
-    [{
-        'ad_group_name': 'test_ad_group',
-        'ctr': 0.5,
-    }],
-    columns=_TEST_AD_GROUP_COLUMNS
-)
+_TEST_AD_GROUP_DF = pd.DataFrame([{
+    'ad_group_name': 'test_ad_group',
+    'ctr': 0.5,
+}], columns=_TEST_AD_GROUP_COLUMNS)
 
 
 def _build_expected_df(keyword: str, match_types: List[str]) -> pd.DataFrame:
@@ -95,8 +83,7 @@ class SearchTermTransformerTest(parameterized.TestCase):
       'search_term': 'more than three tokens',
       'status': 'NONE',
   }, {
-      'testcase_name':
-          'cv <= 0 but ctr and clicks over threshold and tokens > 3',
+      'testcase_name': 'cv <= 0, ctr and clicks over threshold, and tokens > 3',
       'clicks': 6,
       'conversions': 0,
       'ctr': 1.0,
@@ -120,10 +107,11 @@ class SearchTermTransformerTest(parameterized.TestCase):
     test_search_report_df = pd.DataFrame([test_search_report],
                                          columns=_TEST_SEARCH_REPORT_COLUMNS)
     search_term_transformer = search_term_transformer_lib.SearchTermTransformer(
-        _DEFAULT_CLICKS_THRESHOLD, _DEFAULT_CONVERSIONS_THRESHOLD,
-        _DEFAULT_SEARCH_TERM_TOKENS_THRESHOLD, _DEFAULT_SA_ACCOUNT_TYPE,
-        _DEFAULT_SA_LABEL)
-    expected_df = _build_expected_df(search_term, [_MATCH_TYPE_BROAD])
+        constants.DEFAULT_CLICKS_THRESHOLD,
+        constants.DEFAULT_CONVERSIONS_THRESHOLD,
+        constants.DEFAULT_SEARCH_TERM_TOKENS_THRESHOLD,
+        constants.DEFAULT_SA360_ACCOUNT_NAME, constants.DEFAULT_SA360_LABEL)
+    expected_df = _build_expected_df(search_term, [constants.MATCH_TYPE_BROAD])
 
     # Act
     actual_df = search_term_transformer.transform_search_terms_to_keywords(
@@ -140,8 +128,7 @@ class SearchTermTransformerTest(parameterized.TestCase):
       'search_term': 'under four tokens',
       'status': 'ADDED',
   }, {
-      'testcase_name':
-          'cv <= 0 but ctr and clicks over threshold and tokens < 4',
+      'testcase_name': 'cv <= 0, ctr and clicks over threshold, and tokens < 4',
       'clicks': 6,
       'conversions': 0,
       'ctr': 1.0,
@@ -165,11 +152,12 @@ class SearchTermTransformerTest(parameterized.TestCase):
     test_search_report_df = pd.DataFrame([test_search_report],
                                          columns=_TEST_SEARCH_REPORT_COLUMNS)
     test_transformer = search_term_transformer_lib.SearchTermTransformer(
-        _DEFAULT_CLICKS_THRESHOLD, _DEFAULT_CONVERSIONS_THRESHOLD,
-        _DEFAULT_SEARCH_TERM_TOKENS_THRESHOLD, _DEFAULT_SA_ACCOUNT_TYPE,
-        _DEFAULT_SA_LABEL)
-    expected_df = _build_expected_df(search_term,
-                                     [_MATCH_TYPE_EXACT, _MATCH_TYPE_PHRASE])
+        constants.DEFAULT_CLICKS_THRESHOLD,
+        constants.DEFAULT_CONVERSIONS_THRESHOLD,
+        constants.DEFAULT_SEARCH_TERM_TOKENS_THRESHOLD,
+        constants.DEFAULT_SA360_ACCOUNT_NAME, constants.DEFAULT_SA360_LABEL)
+    expected_df = _build_expected_df(
+        search_term, [constants.MATCH_TYPE_EXACT, constants.MATCH_TYPE_PHRASE])
 
     # Act
     actual_df = test_transformer.transform_search_terms_to_keywords(
@@ -210,9 +198,10 @@ class SearchTermTransformerTest(parameterized.TestCase):
     test_search_report_df = pd.DataFrame([test_search_report],
                                          columns=_TEST_SEARCH_REPORT_COLUMNS)
     test_transformer = search_term_transformer_lib.SearchTermTransformer(
-        _DEFAULT_CLICKS_THRESHOLD, _DEFAULT_CONVERSIONS_THRESHOLD,
-        _DEFAULT_SEARCH_TERM_TOKENS_THRESHOLD, _DEFAULT_SA_ACCOUNT_TYPE,
-        _DEFAULT_SA_LABEL)
+        constants.DEFAULT_CLICKS_THRESHOLD,
+        constants.DEFAULT_CONVERSIONS_THRESHOLD,
+        constants.DEFAULT_SEARCH_TERM_TOKENS_THRESHOLD,
+        constants.DEFAULT_SA360_ACCOUNT_NAME, constants.DEFAULT_SA360_LABEL)
 
     # Act
     results = test_transformer.transform_search_terms_to_keywords(
@@ -224,9 +213,10 @@ class SearchTermTransformerTest(parameterized.TestCase):
   def test_transform_search_terms_to_keywords_empty_input(self):
     # Arrange
     test_transformer = search_term_transformer_lib.SearchTermTransformer(
-        _DEFAULT_CLICKS_THRESHOLD, _DEFAULT_CONVERSIONS_THRESHOLD,
-        _DEFAULT_SEARCH_TERM_TOKENS_THRESHOLD, _DEFAULT_SA_ACCOUNT_TYPE,
-        _DEFAULT_SA_LABEL)
+      constants.DEFAULT_CLICKS_THRESHOLD,
+      constants.DEFAULT_CONVERSIONS_THRESHOLD,
+      constants.DEFAULT_SEARCH_TERM_TOKENS_THRESHOLD,
+      constants.DEFAULT_SA360_ACCOUNT_NAME, constants.DEFAULT_SA360_LABEL)
 
     # Act
     results = test_transformer.transform_search_terms_to_keywords(
