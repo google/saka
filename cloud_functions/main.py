@@ -44,6 +44,8 @@ _REQUIRED_NUMERIC_SETTINGS: Dict[str, Any] = {
 
 _OPTIONAL_SETTINGS: List[str] = [
     constants.CAMPAIGN_IDS,
+    constants.KEYWORD_LANDING_PAGE,
+    constants.KEYWORD_MAX_CPC,
 ]
 
 
@@ -107,7 +109,10 @@ def extract_and_upload_keywords(
       settings[constants.CLICKS_THRESHOLD],
       settings[constants.CONVERSIONS_THRESHOLD],
       settings[constants.SEARCH_TERMS_TOKENS_THRESHOLD],
-      settings[constants.SA360_ACCOUNT_NAME], settings[constants.SA360_LABEL])
+      settings[constants.SA360_ACCOUNT_NAME],
+      settings[constants.SA360_LABEL],
+      settings[constants.KEYWORD_LANDING_PAGE],
+      settings[constants.KEYWORD_MAX_CPC])
 
   sa360_bulksheet_df = search_term_transformer.transform_search_terms_to_keywords(
       search_terms_df, ad_groups_df)

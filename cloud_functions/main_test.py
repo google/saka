@@ -87,6 +87,8 @@ _TEST_TRANSFORMED_DF = pd.DataFrame([{
             constants.DEFAULT_SA360_LABEL,
         'SA360_SFTP_USERNAME':
             _TEST_SA360_SFTP_USERNAME,
+        'KEYWORD_LANDING_PAGE': '',
+        'KEYWORD_MAX_CPC': '',
     })
 class MainTest(parameterized.TestCase):
 

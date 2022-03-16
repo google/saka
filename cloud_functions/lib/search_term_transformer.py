@@ -12,16 +12,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Defines the SearchTermTransformer class for the SAKA Cloud Function.
 
 See class docstring for more details.
 """
 
+import decimal
 from typing import Tuple
 
 import constants
-
 import pandas as pd
 
 
@@ -30,7 +29,8 @@ class SearchTermTransformer():
 
   def __init__(self, clicks_threshold: int, conversions_threshold: int,
                search_term_tokens_threshold: int, sa_account_name: str,
-               sa_label: str) -> None:
+               sa_label: str, keyword_landing_page: str,
+               keyword_max_cpc: str) -> None:
     """Initializes the SearchTermTransformer.
 
     Args:
@@ -42,19 +42,27 @@ class SearchTermTransformer():
         determines if the it should be included in the SA360 bulksheet or not.
       sa_account_name: The name of account for the keywords, e.g. "Google".
       sa_label: The label to add to this keyword entry, e.g. "SA_add".
+      keyword_landing_page: The webpage where people end up after they click the
+        ad.
+      keyword_max_cpc: The maximum cost-per-click that will be added to the
+        bulksheet.
     """
     self._clicks_threshold = clicks_threshold
     self._conversions_threshold = conversions_threshold
     self._search_term_tokens_threshold = search_term_tokens_threshold
     self._sa_account_name = sa_account_name
     self._sa_label = sa_label
+    self._keyword_landing_page = keyword_landing_page
+
+    if keyword_max_cpc:
+      self._keyword_max_cpc = round(decimal.Decimal(keyword_max_cpc), 2)
+    else:
+      self._keyword_max_cpc = None
 
     print('Initialized Search Term Transformer class.')
 
-  def transform_search_terms_to_keywords(
-      self,
-      search_results_df: pd.DataFrame,
-      ad_groups: pd.Series) -> pd.DataFrame:
+  def transform_search_terms_to_keywords(self, search_results_df: pd.DataFrame,
+                                         ad_groups: pd.Series) -> pd.DataFrame:
     """Filters search terms based on biz criteria and creates SA360 keywords.
 
     Args:
@@ -65,6 +73,18 @@ class SearchTermTransformer():
       A DataFrame of keywords that are intended to be uploaded to SA360.
     """
     rows = []
+    bulksheet_columns = constants.SA_360_BULKSHEET_COLUMNS.copy()
+    optional_columns = {}
+
+    if self._keyword_landing_page:
+      bulksheet_columns.append(constants.SA_360_COLUMN_KEYWORD_LANDING_PAGE)
+      optional_columns[constants.SA_360_COLUMN_KEYWORD_LANDING_PAGE] = (
+          self._keyword_landing_page)
+
+    if self._keyword_max_cpc:
+      bulksheet_columns.append(constants.SA_360_COLUMN_KEYWORD_MAX_CPC)
+      optional_columns[constants.SA_360_COLUMN_KEYWORD_MAX_CPC] = (
+          self._keyword_max_cpc)
 
     for _, search_term_row in search_results_df.iterrows():
 
@@ -77,21 +97,23 @@ class SearchTermTransformer():
         if not match_type:
           continue
 
-        rows.append({
-            'Row type': 'keyword',
-            'Action': 'create',
-            'Account': self._sa_account_name,
-            'Campaign': search_term_row['campaign_name'],
-            'Ad group': search_term_row['ad_group_name'],
-            'Keyword': search_term_row['search_term'],
-            'Keyword match type': match_type,
-            'Label': self._sa_label
-        })
+        row_to_append = {
+            constants.SA_360_COLUMN_ROW_TYPE: 'keyword',
+            constants.SA_360_COLUMN_ACTION: 'create',
+            constants.SA_360_COLUMN_ACCOUNT: self._sa_account_name,
+            constants.SA_360_COLUMN_CAMPAIGN: search_term_row['campaign_name'],
+            constants.SA_360_COLUMN_AD_GROUP: search_term_row['ad_group_name'],
+            constants.SA_360_COLUMN_KEYWORD: search_term_row['search_term'],
+            constants.SA_360_COLUMN_KEYWORD_MATCH_TYPE: match_type,
+            constants.SA_360_COLUMN_LABEL: self._sa_label,
+        }
 
-    return pd.DataFrame(rows, columns=constants.SA_360_BULKSHEET_COLUMNS)
+        row_to_append.update(optional_columns)
+        rows.append(row_to_append)
 
-  def _get_match_type(self,
-                      search_term_row: pd.Series,
+    return pd.DataFrame(rows, columns=bulksheet_columns)
+
+  def _get_match_type(self, search_term_row: pd.Series,
                       ad_groups: pd.Series) -> Tuple[str, str]:
     """Helper method that determines if the search term row is a keyword.
 
