@@ -101,7 +101,7 @@ gcloud --quiet secrets delete sa360_sftp_password
 # Create API Secrets in GCP Secret Manager.
 print_green "Storing Google Ads and SA360 credentials into Cloud Secret Manager..."
 
-GOOGLE_ADS_API_CREDENTIALS=$"{\n  \"developer_token\": \"$GADS_DEVELOPER_TOKEN\",\n  \"refresh_token\": \"$GADS_REFRESH_TOKEN\",\n  \"client_id\": \"$GADS_CLIENT_ID\",\n  \"client_secret\": \"$GADS_CLIENT_SECRET\",\n  \"login_customer_id\": \"$GADS_MANAGER_ACCOUNT_CUSTOMER_ID\",\n  \"use_proto_plus\": \"True\"\n}"
+GOOGLE_ADS_API_CREDENTIALS=$"{"$'\n'"  \"developer_token\": \"$GADS_DEVELOPER_TOKEN\","$'\n'"  \"refresh_token\": \"$GADS_REFRESH_TOKEN\","$'\n'"  \"client_id\": \"$GADS_CLIENT_ID\","$'\n'"  \"client_secret\": \"$GADS_CLIENT_SECRET\","$'\n'"  \"login_customer_id\": \"$GADS_MANAGER_ACCOUNT_CUSTOMER_ID\","$'\n'"  \"use_proto_plus\": \"True\""$'\n'"}"
 echo "$GOOGLE_ADS_API_CREDENTIALS" | gcloud secrets create google_ads_api_credentials \
     --replication-policy="automatic" \
     --data-file=-
