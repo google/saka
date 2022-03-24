@@ -82,7 +82,7 @@ _TEST_TRANSFORMED_DF = pd.DataFrame([{
         'SEARCH_TERM_TOKENS_THRESHOLD':
             str(constants.DEFAULT_SEARCH_TERM_TOKENS_THRESHOLD),
         'SA360_ACCOUNT_NAME':
-            constants.DEFAULT_SA360_ACCOUNT_NAME,
+            'Google',
         'SA360_LABEL':
             constants.DEFAULT_SA360_LABEL,
         'SA360_SFTP_USERNAME':

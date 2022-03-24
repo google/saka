@@ -29,7 +29,7 @@ _REQUIRED_STR_SETTINGS: Dict[str, str] = {
     constants.GCP_PROJECT_ID: '',
     constants.CUSTOMER_ID: '',
     constants.SA360_SFTP_USERNAME: '',
-    constants.SA360_ACCOUNT_NAME: constants.DEFAULT_SA360_ACCOUNT_NAME,
+    constants.SA360_ACCOUNT_NAME: '',
     constants.SA360_LABEL: constants.DEFAULT_SA360_LABEL,
 }
 

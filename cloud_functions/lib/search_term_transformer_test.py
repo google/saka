@@ -133,12 +133,14 @@ class SearchTermTransformerTest(parameterized.TestCase):
                                          columns=_TEST_SEARCH_REPORT_COLUMNS)
     keyword_landing_page = ''
     keyword_max_cpc = ''
+    sa_360_account_name = 'Google'
 
     search_term_transformer = search_term_transformer_lib.SearchTermTransformer(
         constants.DEFAULT_CLICKS_THRESHOLD,
         constants.DEFAULT_CONVERSIONS_THRESHOLD,
         constants.DEFAULT_SEARCH_TERM_TOKENS_THRESHOLD,
-        constants.DEFAULT_SA360_ACCOUNT_NAME, constants.DEFAULT_SA360_LABEL,
+        sa_360_account_name,
+        constants.DEFAULT_SA360_LABEL,
         keyword_landing_page,
         keyword_max_cpc)
     expected_df = _build_expected_df(search_term, [constants.MATCH_TYPE_BROAD])
@@ -183,11 +185,13 @@ class SearchTermTransformerTest(parameterized.TestCase):
                                          columns=_TEST_SEARCH_REPORT_COLUMNS)
     keyword_landing_page = ''
     keyword_max_cpc = ''
+    sa_360_account_name = 'Google'
     test_transformer = search_term_transformer_lib.SearchTermTransformer(
         constants.DEFAULT_CLICKS_THRESHOLD,
         constants.DEFAULT_CONVERSIONS_THRESHOLD,
         constants.DEFAULT_SEARCH_TERM_TOKENS_THRESHOLD,
-        constants.DEFAULT_SA360_ACCOUNT_NAME, constants.DEFAULT_SA360_LABEL,
+        sa_360_account_name,
+        constants.DEFAULT_SA360_LABEL,
         keyword_landing_page,
         keyword_max_cpc)
     expected_df = _build_expected_df(
@@ -233,11 +237,13 @@ class SearchTermTransformerTest(parameterized.TestCase):
                                          columns=_TEST_SEARCH_REPORT_COLUMNS)
     keyword_landing_page = ''
     keyword_max_cpc = ''
+    sa_360_account_name = 'Google'
     test_transformer = search_term_transformer_lib.SearchTermTransformer(
         constants.DEFAULT_CLICKS_THRESHOLD,
         constants.DEFAULT_CONVERSIONS_THRESHOLD,
         constants.DEFAULT_SEARCH_TERM_TOKENS_THRESHOLD,
-        constants.DEFAULT_SA360_ACCOUNT_NAME, constants.DEFAULT_SA360_LABEL,
+        sa_360_account_name,
+        constants.DEFAULT_SA360_LABEL,
         keyword_landing_page,
         keyword_max_cpc)
 
@@ -252,12 +258,15 @@ class SearchTermTransformerTest(parameterized.TestCase):
     # Arrange
     keyword_landing_page = ''
     keyword_max_cpc = ''
+    sa_360_account_name = 'Google'
     test_transformer = search_term_transformer_lib.SearchTermTransformer(
         constants.DEFAULT_CLICKS_THRESHOLD,
         constants.DEFAULT_CONVERSIONS_THRESHOLD,
         constants.DEFAULT_SEARCH_TERM_TOKENS_THRESHOLD,
-        constants.DEFAULT_SA360_ACCOUNT_NAME, constants.DEFAULT_SA360_LABEL,
-        keyword_landing_page, keyword_max_cpc)
+        sa_360_account_name,
+        constants.DEFAULT_SA360_LABEL,
+        keyword_landing_page,
+        keyword_max_cpc)
 
     # Act
     results = test_transformer.transform_search_terms_to_keywords(
@@ -295,6 +304,7 @@ class SearchTermTransformerTest(parameterized.TestCase):
         'ctr': 2.0,
         'keyword_text': '',
     }
+    sa_360_account_name = 'Google'
     test_search_report_df = pd.DataFrame([test_search_report],
                                          columns=_TEST_SEARCH_REPORT_COLUMNS)
 
@@ -302,7 +312,8 @@ class SearchTermTransformerTest(parameterized.TestCase):
         constants.DEFAULT_CLICKS_THRESHOLD,
         constants.DEFAULT_CONVERSIONS_THRESHOLD,
         constants.DEFAULT_SEARCH_TERM_TOKENS_THRESHOLD,
-        constants.DEFAULT_SA360_ACCOUNT_NAME, constants.DEFAULT_SA360_LABEL,
+        sa_360_account_name,
+        constants.DEFAULT_SA360_LABEL,
         keyword_landing_page,
         keyword_max_cpc)
     expected_df = _build_expected_df(search_term,
