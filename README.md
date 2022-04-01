@@ -24,8 +24,11 @@ In order to use this solution, you must have the following:
 
 - [ ] A Google Ads Account.
 - [ ] A Google Ads API developer token.
-- [ ] A SA 360 Account, with FTP server access. See [here](https://support.google.com/searchads/answer/7409125?hl=en) for details.
+- [ ] A Search Ads 360 Account ("SA360"), with FTP server access. See [here](https://support.google.com/searchads/answer/7409125?hl=en) for details.
 - [ ] A [Google Cloud Platform ("GCP") project](https://cloud.google.com/resource-manager/docs/creating-managing-projects) with an attached billing account. (If a billing account has not been set on the project, set one by [following these instructions](https://cloud.google.com/billing/docs/how-to/modify-project))
+
+***For users not using GCP Cloud Shell, the steps below are also required:***
+
 - [ ] Have [git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) installed locally on your machine.
 - [ ] [Install the Google Cloud SDK](https://cloud.google.com/sdk/) to be able to
     run the installation script. Ensure both alpha and beta are installed, and update components to the latest versions:
@@ -58,7 +61,7 @@ This section will explain how to setup SAKA for use in a GCP environment.
 
 ### 1. Download / Clone the Repository
 
-Either clone this repository using git, or download the code as a tarball by clicking the "tgz" link in the main branch.
+In GCP Cloud Shell or your local terminal, either clone this repository using git, or download the code as a tarball by clicking the "tgz" link in the main branch and extract it.
 
 ### 2. Generate Google Ads API Credentials
 
@@ -80,12 +83,11 @@ When prompted to login to a Google account, select the account that has permissi
 
 ### 3. Configuration
 
--   Navigate to the root directory of the SAKA repository and edit the
-    environment_variables.sh file. Supply values for the variables, noting the ones that are optional. Explanations of each environment variable are shown next to the respective variable.
+-   In GCP Cloud Shell or your local terminal, navigate to the root directory of the SAKA repository and edit the environment_variables.sh file. Supply values for the variables, noting the ones that are optional. Explanations of each environment variable are shown next to the respective variable.
 
 ### 4. Installation
 
--   Run the install script in the root directory using the following command:
+-   In GCP Cloud Shell or your local terminal, run the install script in the repository's root directory using the following command:
     `bash install_to_gcp.sh`.
 -   If you see any errors that a resource already exists, it is likely due to
     the script having been run more than once. In this case these errors can be
@@ -196,4 +198,5 @@ The `CLICKS_THRESHOLD`, `CONVERSIONS_THRESHOLD`, and `SEARCH_TERM_TOKENS_THRESHO
 
 If you want to create totally different logic, update `_get_match_type()` in
 `search_term_transformer.py`. This method is responsible for determining if and how a search term should be added as a keyword.
+
 
