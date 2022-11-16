@@ -12,7 +12,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 """Cloud Function to add Google Ads search terms as keywords via SA360."""
+
 import json
 import os
 from typing import Any, Dict, List

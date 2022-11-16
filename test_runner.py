@@ -14,6 +14,7 @@
 # limitations under the License.
 
 """Runs all unit tests for the SAKA Cloud Function and dependent modules."""
+
 import argparse
 import os
 import sys
