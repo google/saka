@@ -103,7 +103,7 @@ permission to modify your Google Ads data.
 ### 3. Configuration
 
 -   In GCP Cloud Shell or your local terminal, navigate to the root directory of
-    the SAKA repository and edit the environment_variables.sh file. Supply
+    the SAKA repository and edit the `environment_variables.sh` file. Supply
     values for the variables, noting the ones that are optional. Explanations of
     each environment variable are shown next to the respective variable.
 
@@ -126,18 +126,26 @@ permission to modify your Google Ads data.
 -   Run the following git commands in the same local repository you cloned and
     ran the initialization script in:
 
-    1.  `git remote add gcp
-        ssh://[EMAIL]@source.developers.google.com:2022/p/[PROJECT_ID]/r/[REPO_NAME]`
-        (Where `PROJECT_ID` is your GCP project ID and `REPO_NAME` is the
-        repository name you set for `SOURCE_REPO` in environment_variables.sh)
-    2.  `git add --all -- ':!environment_variables.sh'`
-    3.  `git commit -m "[Your commit message]"`
-    4.  `git push --all gcp` (If you see a prompt for choosing a configuration,
-        choose option 1)
+    1.  ```
+        git remote add gcp ssh://[EMAIL]@source.developers.google.com:2022/p/[PROJECT_ID]/r/[REPO_NAME]
+        ```
+        (where `PROJECT_ID` is your GCP project ID and `REPO_NAME` is the
+        repository name you set for `SOURCE_REPO` in `environment_variables.sh`)
+    2.  ```
+        git add --all -- ':!environment_variables.sh'
+        ```
+    3.  ```
+        git commit -m "[Your commit message]"
+        ```
+    4.  ```
+        git push --all gcp
+        ```
+        If you see a prompt for choosing a configuration,
+        choose option i.
 
 -   Cloud Build will auto-trigger on the git push and deploy the code to GCP. It
-    should take around 5 minutes. [You can check the status in your GCP
-    Console's Cloud Build dashboard or history
+    should take around 5 minutes. You can check the status in your GCP
+    Console's [Cloud Build dashboard or history
     tab](https://cloud.google.com/cloud-build/docs/view-build-results#viewing_build_results).
 
 -   Ensure that the Cloud Build logs show no errors.
@@ -171,21 +179,22 @@ By default, the logic is as follows:
 *   Only add search terms where:
 
     *   Conversions > conversions threshold (default=0, update via
-        CONVERSIONS_THRESHOLD environment variable) OR
+        `CONVERSIONS_THRESHOLD` environment variable) 
+        OR
     *   CTR > Ad Group CTR AND clicks > clicks threshold (default=5, update via
-        CLICKS_THRESHOLD environment variable)
+        `CLICKS_THRESHOLD` environment variable)
 
 *   If the number of tokens in the threshold > tokens threshold (default=3,
-    update via SEARCH_TERM_TOKENS_THRESHOLD environment variable), add the
-    search term as a BROAD keyword
+    update via `SEARCH_TERM_TOKENS_THRESHOLD` environment variable), add the
+    search term as a `BROAD` keyword
 
-*   Otherwise, add the search term as an EXACT and PHRASE keyword.
+*   Otherwise, add the search term as an `EXACT` and `PHRASE` keyword.
 
 ## Confirming Run Operation
 
 After installation, SAKA is scheduled to run by default once daily. This can be
 confirmed by navigating to GCP's Cloud Scheduler and checking the
-"triggerSakaFunction" job's "Last run result" column (It should show "Success"),
+`triggerSakaFunction` job's "Last run result" column (It should show "Success"),
 or clicking on the job's "View" button in the "Logs" column.
 
 If there were any issues, detailed logs can be viewed from the Cloud Function's
@@ -208,9 +217,9 @@ group, so this error can safely be ignored.
 
 By default, SAKA will extract search terms for **all** campaigns for the
 specified customer ID. If you want to only extract search terms for certain
-campaigns, update the "CAMPAIGN_IDS" environment variable (either by editing
+campaigns, update the `CAMPAIGN_IDS` environment variable (either by editing
 `environment_variables.sh` and re-running the installer, or directly in the
-Cloud Function's settings) to be a comma-separated list of the IDs for the
+Cloud Function's settings) to a comma-separated list of the IDs for the
 campaigns you want to query.
 
 For example, `CAMPAIGN_IDS` can be formatted as follows:
